@@ -1,0 +1,2652 @@
+Option Explicit // 変数宣言を強制
+Option SameStr // 大文字小文字を区別する
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　変数の宣言
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Dim Gyou // 汎用の行変数
+Dim Index // 汎用の配列用インデックス
+Dim Index2 // 汎用の配列用インデックス
+Dim String // 汎用の文字列
+Dim String2 // 汎用の文字列
+
+Public KoushinFlag // ショートカット一覧を、更新すべきかのフラグ
+Public Page // ショートカット一覧のページ
+Public PageMax // 全ページ数
+
+Public ToujoujinbutsuID // 登場人物.txtのファイルID
+Public nicotalkFolder // nicotalkフォルダの場所
+
+Public IchiGyouMa // 間と字幕.txtに書かれた「１行の間」を記憶
+Public NiGyouMa // 間と字幕.txtに書かれた「２行の間」を記憶
+Public SanGyouMa // 間と字幕.txtに書かれた「３行の間」を記憶
+Public HaikeiBgmMa // 間と字幕.txtに書かれた「背景BGMの初期値」を記憶
+Public BichouseiMa // 間と字幕.txtに書かれた「微調整の初期値」を記憶
+Public JidouKaigyou // 間と字幕.txtに書かれた「自動改行」を記憶
+Public KyouseiKaigyou // 間と字幕.txtに書かれた「強制改行」を記憶
+Public JimakuX // 間と字幕.txtに書かれた「字幕X」を記憶
+Public KakkoJimaku // 間と字幕.txtに書かれた「括弧字幕」を記憶
+
+Public AryHaikeiFile[999] // 背景フォルダ内のファイル名を記憶
+Public AryBgmFile[999] // BGMフォルダ内のファイル名を記憶
+Public ArySeFile[999] // SEフォルダ内のファイル名を記憶
+
+Public AryCharaTeigi[999] // 登場人物.txtで定義した「キャラ」を順に記憶
+Public AryHenkanMae[9999] // 辞書.txtの変換前文字列（文字数降順ソート済）
+Public AryHenkanGo[9999] // 辞書.txtの変換後文字列（文字数降順ソート済）
+
+Public HashTbl HtbSokudo // キャラごとの速度
+Public HashTbl HtbOnryou // キャラごとの音量
+Public HashTbl HtbYokuyou // キャラごとの抑揚
+Public HashTbl HtbCharaSettei // 台本.txtの※行に書く為のキャラ設定をまるごと記憶
+
+Public ActiveWindow // ウィンドウ遷移のチェックの為、chara_selector操作対象のウィンドウ名を記憶
+
+// 使用する前に、USWCのFree版をインストールして、Windowsの環境設定でパスを通しておきます。
+// ついでに、.uwsの拡張子をUWSC.exeに関連付けておきます。
+// ここまでが前提(関連付けが済むと青バックのアイコンに代わります)で、
+// ここまでやっておけば、Step1.uwsというソースを実行することで動くようになります。
+// ここ以降が本題で、
+// 事前にVOICEVOXあるいはCOEIROINKの両方あるいはいずれかをインストールしておきます。
+// また、SAPI For VoiceVoX(32ビット)で棒読みちゃんと連携させておきましょう。
+// VoiceVox＋Coeiroink用にちょっとだけ追加(とりあえず動けばいいバージョン)
+// 登場人物.txtの声の部分は
+// 【棒読みちゃん用】声質=VOICEVOX 冥鳴ひまり ノーマル
+// のように書いておく(ノーマル直後にはスペース入れちゃダメ)。
+// ↑は棒読みちゃんの設定→システム→音声合成エンジンの表示名を書く(選択すると下の表示名の欄に出るのでコピペする)
+// 確認後、棒読みちゃんを閉じ忘れないこと
+// VOICEVOXとCOEIROINKは実行ファイルをフルパスで記載します。
+// 仮としてパスを入れてありますが、環境に応じて書き換えてください。
+// ↓ここです。
+public VOICEVOX="C:\Program Files\VOICEVOX\VOICEVOX.exe"
+public COEIROINK="C:\COEIROINK-CPU-v.1.2.0\COEIROINKonVOICEVOX.exe"
+
+Public VVFLAG  // For VoiceVox
+Public VVFLAG2 // For Coeiroink
+Public Wait4VVen=10
+VVFLAG=0
+VVFLAG2=0
+// あとついでに文字を中央揃えにするための設定も追加しています。
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　nicotalkフォルダの場所を取得し、台本.txtをチェック
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+// 台本.txtの場所を取得
+nicotalkFolder = Copy(GET_CUR_DIR,1,Pos("Step1",GET_CUR_DIR)-2)
+
+// 台本.txtの場所が正しいかをチェック
+If FOpen(nicotalkFolder+"\台本.txt",F_EXISTS) = False Then StopMacro("Step1フォルダの一階層上に台本.txtが存在しない為、中止します。")
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　キャラ切替ショートカット受付ループ
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+KoushinFlag = True
+Page = 1
+ActiveWindow = Status(GetID(GET_ACTIVE_WIN),ST_TITLE)
+While True
+
+	If GetKeyState(VK_Escape) = True Then StopMacro("ESCキーが押された為、Step1.exeを終了します。")
+
+	Ifb KoushinFlag = True Then
+
+		// 間と字幕.txt用の各変数を初期化
+		IchiGyouMa = 0
+		NiGyouMa = 0
+		SanGyouMa = 0
+		HaikeiBgmMa = 0
+		BichouseiMa = 0
+		JidouKaigyou = 0
+		KyouseiKaigyou = 0
+		JimakuX = 0
+
+		// 各配列をクリア
+		SetClear(AryHaikeiFile)
+		SetClear(AryBgmFile)
+		SetClear(ArySeFile)
+		SetClear(AryCharaTeigi)
+		SetClear(AryHenkanMae)
+		SetClear(AryHenkanGo)
+
+		HtbSokudo = HASH_REMOVEALL
+		HtbOnryou = HASH_REMOVEALL
+		HtbCharaSettei = HASH_REMOVEALL
+
+		// 間と字幕.txtの存在チェックと読み込み
+		If FOpen(GET_CUR_DIR+"\設定\間と字幕.txt",F_EXISTS) = False Then StopMacro("間と字幕.txtが、設定フォルダ内に無い為、中止します。")
+		GetMaJimaku()
+
+		// 登場人物.txtの存在チェックと読み込み
+		If FOpen(GET_CUR_DIR+"\設定\登場人物.txt",F_EXISTS) = False Then StopMacro("登場人物.txtが、設定フォルダ内に無い為、中止します。")
+		GetChara()
+
+		// 辞書.txtの存在チェックと読み込み
+		If FOpen(GET_CUR_DIR+"\設定\辞書.txt",F_EXISTS) = False Then StopMacro("辞書.txtが、設定フォルダ内に無い為、中止します。")
+		GetJisho()
+
+		// 背景フォルダ内のファイルを取得
+		GetDir(nicotalkFolder+"\素材\背景") // GETDIR_FILES[]に全ファイルを記憶
+		For Index = 0 to Resize(GETDIR_FILES)
+			AryHaikeiFile[Index+1] = GETDIR_FILES[Index]
+		Next
+
+		// BGMフォルダ内のファイルを取得
+		GetDir(nicotalkFolder+"\素材\BGM") // GETDIR_FILES[]に全ファイルを記憶
+		Index2 = 1
+		For Index = 0 to Resize(GETDIR_FILES)
+			String = GETDIR_FILES[Index]
+			Token(".",String)
+			Token(".",String)
+			Ifb String <> "lwi" and String <> "bak" Then
+				AryBgmFile[Index2] = GETDIR_FILES[Index]
+				Index2 = Index2 + 1
+			EndIF
+		Next
+
+		// SEフォルダ内のファイルを取得
+		GetDir(nicotalkFolder+"\素材\SE") // GETDIR_FILES[]に全ファイルを記憶
+		Index2 = 1
+		For Index = 0 to Resize(GETDIR_FILES)
+			String = GETDIR_FILES[Index]
+			Token(".",String)
+			Token(".",String)
+			Ifb String <> "lwi" and String <> "bak" Then
+				ArySeFile[Index2] = GETDIR_FILES[Index]
+				Index2 = Index2 + 1
+			EndIF
+		Next
+
+		// メモ帳がアクティブな場合はショートカット受付、ただし、台本.txtや設定.txt、設定フォルダ内のテキストを開いている場合は反応しない
+		Ifb Pos(" - メモ帳",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) > 0 and Pos("台本.txt",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) = 0  and Pos("設定.txt",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) = 0 and Pos("登場人物.txt",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) = 0 and Pos("登場人物 - ",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) = 0 and Pos("間と字幕.txt",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) = 0 and Pos("辞書.txt",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) = 0 and Pos("ReadMe.txt",Status(GetID(GET_ACTIVE_WIN),ST_TITLE)) = 0 Then
+
+			// ショートカット一覧の表示
+			String = "◆キャラ選択 Page." + Page + "/" + PageMax + "<#CR><#CR>"
+			For Index = 1 to 9
+				If AryCharaTeigi[9*(Page-1)+Index] = "" Then Break
+				String = String + "[Ctrl]+[" + Index + "]：" + AryCharaTeigi[9*(Page-1)+Index] + "<#CR>"
+			Next
+			Ifb AryCharaTeigi[10] <> "" Then
+				String = String + "[Ctrl]+[0]：次ページ<#CR>"
+			EndIf 
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[D]：キャラ切替<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[E]：エコー適用<#CR>"
+			String = String + "[Ctrl]+[M]：間の微調整<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[↑]：音量アップ<#CR>"
+			String = String + "[Ctrl]+[↓]：音量ダウン<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[→]：速度アップ<#CR>"
+			String = String + "[Ctrl]+[←]：速度ダウン<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[Y]：抑揚アップ<#CR>"
+			String = String + "[Ctrl]+[U]：抑揚ダウン<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[+]：背景チェンジ<#CR>"
+			String = String + "[Ctrl]+[-]：BGMチェンジ<#CR>"
+			String = String + "[Ctrl]+[*]：SE追加<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[J]：辞書登録<#CR>"
+			String = String + "[Ctrl]+[Space]：音声文<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[Q]：最適化<#CR>"
+			String = String + "[Ctrl]+[T]：登場人物<#CR>"
+			String = String + "<#CR>"
+			String = String + "[Ctrl]+[Enter]：台本出力<#CR>"
+			String = String + "<#CR>"
+			String = String + "[ESC]キー：終了"
+			Fukidasi(String,0,0,,,,,$ffeebb)
+
+			// ショートカットの解除
+			For Index = 1 to 9
+				SetHotKey(48+Index,MOD_CONTROL) // Ctrl+テンキーの数字キー
+				SetHotKey(96+Index,MOD_CONTROL) // Ctrl+テンキー以外の数字キー
+			Next
+
+			// ショートカットの登録
+			SetHotKey(VK_D,MOD_CONTROL,"CharaChange") // Ctrl+D
+			SetHotKey(VK_E,MOD_CONTROL,"EchoChange") // Ctrl+E
+			SetHotKey(VK_M,MOD_CONTROL,"MaChange") // Ctrl+M
+			SetHotKey(VK_Up,MOD_CONTROL,"OnryouChange") // Ctrl+↑
+			SetHotKey(VK_Down,MOD_CONTROL,"OnryouChange") // Ctrl+↓
+			SetHotKey(VK_Right,MOD_CONTROL,"SokudoChange") // Ctrl+→
+			SetHotKey(VK_Left,MOD_CONTROL,"SokudoChange") // Ctrl+←
+			SetHotKey(VK_Y,MOD_CONTROL,"YokuyouChange") // Ctrl+Y
+			SetHotKey(VK_U,MOD_CONTROL,"YokuyouChange") // Ctrl+U
+			SetHotKey(VK_Add,MOD_CONTROL,"HaikeiChange") // Ctrl++
+			SetHotKey(VK_Oem_Plus,MOD_CONTROL,"HaikeiChange") // Ctrl++
+			SetHotKey(VK_Subtract,MOD_CONTROL,"BgmChange") // Ctrl+-
+			SetHotKey(VK_Oem_Minus,MOD_CONTROL,"BgmChange") // Ctrl+-
+			SetHotKey(VK_Decimal,MOD_CONTROL,"SeChange") // Ctrl+.
+			SetHotKey(VK_Oem_Period,MOD_CONTROL,"SeChange") // Ctrl+.
+			SetHotKey(VK_Multiply,MOD_CONTROL,"SeChange") // Ctrl+*
+			SetHotKey(VK_Oem_1,MOD_CONTROL,"SeChange") // Ctrl+*
+			SetHotKey(VK_J,MOD_CONTROL,"JishoTouroku") // Ctrl+J
+			SetHotKey(VK_Space,MOD_CONTROL,"AddOnseibun") // Ctrl+Space
+			SetHotKey(VK_Q,MOD_CONTROL,"Saitekika") // Ctrl+Q
+			SetHotKey(VK_T,MOD_CONTROL,"OpenChara") // Ctrl+T
+			SetHotKey(VK_Enter,MOD_CONTROL,"OutputDaihon") // Ctrl+Enter
+
+			For Index = 1 to 9
+				If AryCharaTeigi[9*(Page-1)+Index] = "" Then Break
+				SetHotKey(48+Index,MOD_CONTROL,"SelectChara") // Ctrl+テンキーの数字キー
+				SetHotKey(96+Index,MOD_CONTROL,"SelectChara") // Ctrl+テンキー以外の数字キー
+			Next
+			Ifb AryCharaTeigi[10] <> "" Then
+				SetHotKey(VK_0,MOD_CONTROL,"NextPage")
+				SetHotKey(VK_Numpad0,MOD_CONTROL,"NextPage")
+			EndIf
+
+		Else // メモ帳がアクティブじゃない時は待機
+
+			// ショートカット一覧の非表示
+			String = "◇待機中<#CR><#CR>"
+			String = String + "[ESC]キー：終了"
+			Fukidasi(String,0,0,,,,,$bbeeff)
+
+			// ショートカットの解除
+			SetHotKey(VK_D,MOD_CONTROL) // Ctrl+D
+			SetHotKey(VK_E,MOD_CONTROL) // Ctrl+E
+			SetHotKey(VK_M,MOD_CONTROL) // Ctrl+M
+			SetHotKey(VK_Up,MOD_CONTROL) // Ctrl+↑
+			SetHotKey(VK_Down,MOD_CONTROL) // Ctrl+↓
+			SetHotKey(VK_Right,MOD_CONTROL) // Ctrl+→
+			SetHotKey(VK_Left,MOD_CONTROL) // Ctrl+←
+			SetHotKey(VK_Y,MOD_CONTROL) // Ctrl+Y
+			SetHotKey(VK_U,MOD_CONTROL) // Ctrl+U
+			SetHotKey(VK_Add,MOD_CONTROL) // Ctrl++
+			SetHotKey(VK_Oem_Plus,MOD_CONTROL) // Ctrl++
+			SetHotKey(VK_Subtract,MOD_CONTROL) // Ctrl+-
+			SetHotKey(VK_Oem_Minus,MOD_CONTROL) // Ctrl+-
+			SetHotKey(VK_Decimal,MOD_CONTROL) // Ctrl+.
+			SetHotKey(VK_Oem_Period,MOD_CONTROL) // Ctrl+.
+			SetHotKey(VK_Multiply,MOD_CONTROL) // Ctrl+*
+			SetHotKey(VK_Oem_1,MOD_CONTROL) // Ctrl+*
+			SetHotKey(VK_J,MOD_CONTROL) // Ctrl+J
+			SetHotKey(VK_Space,MOD_CONTROL) // Ctrl+Space
+			SetHotKey(VK_Q,MOD_CONTROL) // Ctrl+Q
+			SetHotKey(VK_T,MOD_CONTROL) // Ctrl+T
+			SetHotKey(VK_Enter,MOD_CONTROL) // Ctrl+Enter
+
+			For Index = 1 to 9
+				SetHotKey(48+Index,MOD_CONTROL) // Ctrl+テンキーの数字キー
+				SetHotKey(96+Index,MOD_CONTROL) // Ctrl+テンキー以外の数字キー
+			Next
+			Ifb AryCharaTeigi[10] <> "" Then
+				SetHotKey(VK_0,MOD_CONTROL)
+				SetHotKey(VK_Numpad0,MOD_CONTROL)
+			EndIf
+
+		EndIf
+
+	EndIf
+
+	//操作対象のアクティブウィンドウが移った場合の処理
+	Ifb Status(GetID(GET_ACTIVE_WIN),ST_TITLE) <> ActiveWindow Then
+		KoushinFlag = True
+	Else
+		KoushinFlag = False
+	EndIf
+
+	// ウィンドウ遷移のチェックの為、操作対象のウィンドウ名を記憶
+	ActiveWindow = Status(GetID(GET_ACTIVE_WIN),ST_TITLE)
+
+	Sleep(0.2)
+
+Wend
+
+StopMacro("Step1.exeを終了しました。") // 終了
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：設定.txt※行のキャラ選択(Ctrl+数字)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure SelectChara()
+
+	Dim CharaName // 台本の一行から取得した、キャラ名
+	Dim CharaSettei // 台本の一行から取得した、キャラ設定
+	Dim SerifuBun // 台本の一行から取得した、台詞文
+
+	// Ctrlキーが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	SerifuBun = GetStr(0)
+
+	// （音声文）の行が選択されていたら、直前の一行を取得
+	Ifb Pos("（",SerifuBun) = 1 and Pos("）",SerifuBun) > 1 Then
+
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+		SerifuBun = GetStr(0)
+
+	EndIf
+
+	Ifb Replace(Replace(Copy(SerifuBun,1,3),"　","")," ","") <> "★SE" Then
+		Ifb Pos("「",SerifuBun) > 0 or SerifuBun = "" Then
+
+			// キャラ名とキャラ設定を取得
+			CharaSettei = Token("「",SerifuBun)
+			CharaName = CharaSettei
+			CharaName = Token(",",CharaName)
+			CharaName = Token("：",CharaName)
+			CharaSettei = Copy(CharaSettei,Length(CharaName)+1)
+			CharaSettei = Replace(CharaSettei,"：","")
+
+			// 選択されえた数字のキャラを取得
+			Ifb HOTKEY_VK >= 96 Then
+				CharaName = AryCharaTeigi[9*(Page-1) + HOTKEY_VK-96]
+			Else
+				CharaName = AryCharaTeigi[9*(Page-1) + HOTKEY_VK-48]
+			EndIf
+
+			// 次キャラに置き換えた、台詞文をクリップボードに記憶し、ペースト
+			SendStr(0,CharaName + CharaSettei + "「" + SerifuBun)
+			ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+		EndIf
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：次ページの表示(Ctrl+0)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure NextPage()
+
+	Ifb AryCharaTeigi[9*Page+1] = "" Then
+		Page = 1
+	Else
+		Page = Page + 1
+	EndIf
+	KoushinFlag = True
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：台本登場済みキャラの切替(Ctrl+D)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure CharaChange()
+
+	Dim Index // 汎用の配列用インデックス
+	Dim Index2 // 汎用の配列用インデックス
+	Dim String // 汎用の文字列
+	Dim String2 // 汎用の文字列
+
+	Dim CharaName // 台本の一行から取得した、キャラ名
+	Dim SerifuBun // 台本の一行から取得した、台詞文
+
+ 	Dim AryToujouChara[999] // 台本登場済みのキャラ
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_D) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	SerifuBun = GetStr(0)
+
+	// （音声文）の行が選択されていたら、直前の一行を取得
+	Ifb Pos("（",SerifuBun) = 1 and Pos("）",SerifuBun) > 1 Then
+
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+		SerifuBun = GetStr(0)
+
+	EndIf
+
+	Ifb Replace(Replace(Copy(SerifuBun,1,3),"　","")," ","") <> "★SE" Then
+		Ifb Pos("「",SerifuBun) > 0 or SerifuBun = "" Then
+
+			// 脚本登場済みキャラを取得
+			String = GetStr(GetID(GET_ACTIVE_WIN))
+			String = Replace(String,"<#CR>","Μ") // 改行をΜ（ギリシャ語ミュー）に置換
+			While String <> ""
+
+				// 一行を取得
+				String2 = Token("Μ",String)
+
+				Ifb Pos("「",String2) > 0 Then // 一行に「が含まれていれば
+
+					CharaName = Replace(Replace(Token("「",String2),"　","")," ","") // キャラ名を取得
+
+					Ifb CharaName <> "" and CharaName <> "★SE" and Copy(CharaName,1,2) <> "//" Then
+
+						// 台本登場済みキャラ配列に格納
+						For Index = 1 to 999
+
+							// 既に脚本登場済みキャラ配列に登場済みの場合は除く
+							If AryToujouChara[Index] = CharaName Then Break
+
+							// 脚本登場済みキャラ配列に空きが有れば登録
+							Ifb AryToujouChara[Index] = "" Then
+								AryToujouChara[Index] = CharaName
+								Break
+							EndIf
+
+						Next
+
+					EndIf
+
+				EndIf
+
+			Wend
+
+			// 脚本登場済みキャラ配列をキャラ定義順にソート
+			String = "" 
+			Index = 1
+			While AryToujouChara[Index] <> ""
+				String = String + AryToujouChara[Index] + "-"
+				Index = Index + 1
+			Wend
+			SetClear(AryToujouChara) // -で連結した文字列に退避後、一旦、登場キャラ配列をクリア
+			Index = 1
+			Index2 = 1
+			While AryCharaTeigi[Index] <> ""
+				Ifb Pos(AryCharaTeigi[Index]+"-",String) > 0 Then
+					AryToujouChara[Index2] = AryCharaTeigi[Index]
+					Index2 = Index2 + 1
+				EndIf
+				Index = Index + 1
+			Wend
+
+			// 現在行のキャラ名と設定と台詞文を分解
+			CharaName = Token("「",SerifuBun) // 「の前の文字列からキャラ名を取得
+
+			// カーソルが有る行のキャラの次に、定義されているキャラを取得
+			Ifb CharaName = "" Then
+
+				CharaName = AryToujouChara[1]
+
+			Else
+
+				For Index = 1 to 999
+
+					Ifb CharaName = AryToujouChara[Index] Then
+						Ifb AryToujouChara[Index+1] = "" Then
+							CharaName = AryToujouChara[1]
+						Else
+							CharaName = AryToujouChara[Index+1]
+						EndIf
+						Break
+					EndIf
+
+					If AryToujouChara[Index] = "" Then CharaName = AryToujouChara[1]
+
+				Next
+
+			EndIf
+
+			// 次キャラに置き換えた、台詞文をクリップボードに記憶し、ペースト
+			SendStr(0,CharaName + "「" + SerifuBun)
+			ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+		EndIf
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：エコーの切替(Ctrl+E)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure EchoChange()
+
+	Dim String // 汎用の文字列
+	Dim SerifuBun // 台本の一行から取得した」前の台詞文
+	Dim SetteiBun // 台本の一行から取得した」後の設定文
+	Dim EchoFlag // 設定文にechoの文字が有ったかどうかのフラグ
+	Dim OnryouSettei // o+10などの音量設定を記憶
+	Dim SokudoSettei // s+10などの速度設定を記憶
+	Dim MaSettei // m=0.3などの間設定を記憶
+	Dim SeSettei // se=効果音.mp3などのSE設定を記憶
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_E) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	SetteiBun = GetStr(0)
+
+	// （音声文）の行が選択されていたら、直前の一行を取得
+	Ifb Pos("（",SetteiBun) = 1 and Pos("）",SetteiBun) > 1 Then
+
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+		SetteiBun = GetStr(0)
+
+	EndIf
+
+	Ifb Pos("「",SetteiBun) > 0 and Copy(SetteiBun,1,3) <> "★SE" Then // 「が有る文で★SE以外を処理
+
+		SerifuBun = AddKakko(SerifuBun) // 」で閉じてなければ」を追加
+
+		// 」前の台詞文をSerifuBunに、」後の設定文をSetteiBunに記憶
+		SerifuBun = Token("」",SetteiBun)
+		While Pos("」",SetteiBun) > 0
+			SerifuBun = SerifuBun + "」" + Token("」",SetteiBun)
+		Wend
+
+		// 設定文から、エコー、速度、音量、SEを取得
+		EchoFlag = False
+		SokudoSettei = ""
+		OnryouSettei = ""
+		MaSettei = ""
+		SeSettei =""
+		While SetteiBun <> ""
+			String = Token(",",SetteiBun)
+			If String = "echo" Then EchoFlag = True
+			If Copy(String,1,1) = "s" and ChkNum(Copy(String,2)) = True Then SokudoSettei = String
+			If Copy(String,1,1) = "o" and ChkNum(Copy(String,2)) = True Then OnryouSettei = String
+			If Copy(String,1,2) = "m=" Then MaSettei = String
+			If Copy(String,1,3) = "se=" Then SeSettei = String
+		Wend
+
+		// 設定文のエコーを切り替えて再構成
+		SetteiBun = ""
+		If EchoFlag = False Then SetteiBun = "echo"
+		If SetteiBun <> "" and SokudoSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SokudoSettei
+		If SetteiBun <> "" and OnryouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + OnryouSettei
+		If SetteiBun <> "" and MaSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + MaSettei
+		If SetteiBun <> "" and SeSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SeSettei
+
+		// 効果を切り替え後の文をペースト
+		SendStr(0,SerifuBun + "」" + SetteiBun)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：間の微調整(Ctrl+M)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure MaChange()
+
+	Dim String // 汎用の文字列
+	Dim SerifuBun // 台本の一行から取得した」前の台詞文
+	Dim SetteiBun // 台本の一行から取得した」後の設定文
+	Dim EchoSettei // echoのエコー設定を記憶
+	Dim OnryouSettei // o+10などの音量設定を記憶
+	Dim SokudoSettei // s+10などの速度設定を記憶
+	Dim MaSettei // m=0.3などの間設定を記憶
+	Dim SeSettei // se=効果音.mp3などのSE設定を記憶
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_M) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	SetteiBun = GetStr(0)
+
+	// （音声文）の行が選択されていたら、直前の一行を取得
+	Ifb Pos("（",SetteiBun) = 1 and Pos("）",SetteiBun) > 1 Then
+
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+		SetteiBun = GetStr(0)
+
+	EndIf
+
+	Ifb Pos("「",SetteiBun) > 0 Then // 「が有る文のみ処理
+
+		SerifuBun = AddKakko(SerifuBun) // 」で閉じてなければ」を追加
+
+		// 」前の台詞文をSerifuBunに、」後の設定文をSetteiBunに記憶
+		SerifuBun = Token("」",SetteiBun)
+		While Pos("」",SetteiBun) > 0
+			SerifuBun = SerifuBun + "」" + Token("」",SetteiBun)
+		Wend
+
+		// 設定文から、エコー、速度、音量、SEを取得
+		EchoSettei = ""
+		SokudoSettei = ""
+		OnryouSettei = ""
+		MaSettei = ""
+		SeSettei =""
+		While SetteiBun <> ""
+			String = Token(",",SetteiBun)
+			If String = "echo" Then EchoSettei = String
+			If Copy(String,1,1) = "s" and ChkNum(Copy(String,2)) = True Then SokudoSettei = String
+			If Copy(String,1,1) = "o" and ChkNum(Copy(String,2)) = True Then OnryouSettei = String
+			If Copy(String,1,2) = "m=" Then MaSettei = String
+			If Copy(String,1,3) = "se=" Then SeSettei = String
+		Wend
+
+		// 間が未記入ならデフォルト値を代入、記入済みなら未記入に
+		Ifb MaSettei = "" or MaSettei = "m=d" Then
+			MaSettei = "m=" + BichouseiMa
+		Else
+			MaSettei = "m=d"
+		EndIf
+
+		// 設定文の再構成
+		SetteiBun = EchoSettei
+		If SetteiBun <> "" and SokudoSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SokudoSettei
+		If SetteiBun <> "" and OnryouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + OnryouSettei
+		If SetteiBun <> "" and SeSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SeSettei
+		If SetteiBun <> "" and MaSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + MaSettei
+
+		// 効果を切り替え後の文をペースト
+		SendStr(0,SerifuBun + "」" + SetteiBun)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：速度の切替(Ctrl+←)(Ctrl+→)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure SokudoChange()
+
+	Dim String // 汎用の文字列
+	Dim SerifuBun // 台本の一行から取得した、台詞文
+	Dim SetteiBun // 台本の一行から取得した、設定文
+	Dim RightFlag // →が押されてたかどうかフラグ
+	Dim Sokudo // 速度
+
+	Dim EchoSettei // echoのエコー設定を記憶
+	Dim OnryouSettei // o+10などの音量設定を記憶
+	Dim SokudoSettei // s+10などの速度設定を記憶
+	Dim YokuyouSettei // y+10などの抑揚設定を記憶
+	Dim MaSettei // m=0.3などの間設定を記憶
+	Dim SeSettei // se=効果音.mp3などのSE設定を記憶
+
+	// 押されたキーの判別
+	RightFlag = False
+	If HOTKEY_VK = VK_Right Then RightFlag = True
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Left) = True or GetKeyState(VK_Right) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	SetteiBun = GetStr(0)
+
+	// （音声文）の行が選択されていたら、直前の一行を取得
+	Ifb Pos("（",SetteiBun) = 1 and Pos("）",SetteiBun) > 1 Then
+
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+		SetteiBun = GetStr(0)
+
+	EndIf
+
+	Ifb Pos("「",SetteiBun) > 0 and Copy(SetteiBun,1,3) <> "★SE" Then // 「が有る文で★SE以外を処理
+
+		SerifuBun = AddKakko(SerifuBun) // 」で閉じてなければ」を追加
+
+		// 」前の台詞文をSerifuBunに、」後の設定文をSetteiBunに記憶
+		SerifuBun = Token("」",SetteiBun)
+		While Pos("」",SetteiBun) > 0
+			SerifuBun = SerifuBun + "」" + Token("」",SetteiBun)
+		Wend
+
+		// 設定文から、エコー、速度、音量、抑揚、間、SEを取得
+		EchoSettei = ""
+		SokudoSettei = ""
+		OnryouSettei = ""
+		YokuyouSettei = ""
+		MaSettei = ""
+		SeSettei = ""
+		While SetteiBun <> ""
+			String = Token(",",SetteiBun)
+			If String = "echo" Then EchoSettei = String
+			If Copy(String,1,1) = "s" and ChkNum(Copy(String,2)) = True Then SokudoSettei = String
+			If Copy(String,1,1) = "o" and ChkNum(Copy(String,2)) = True Then OnryouSettei = String
+			If Copy(String,1,1) = "y" and ChkNum(Copy(String,2)) = True Then YokuyouSettei = String
+			If Copy(String,1,2) = "m=" Then MaSettei = String
+			If Copy(String,1,3) = "se=" Then SeSettei = String
+		Wend
+
+		// 速度の取得
+		Sokudo = 0
+		If SokudoSettei <> "" Then Sokudo = Val(Copy(SokudoSettei,2))
+
+		Ifb Sokudo <> ERR_VALUE Then // 速度が数値の場合のみ処理
+
+			// 速度の変更
+			If RightFlag = True Then Sokudo = Sokudo + 10
+			If RightFlag = False Then Sokudo = Sokudo - 10
+
+			// 速度設定の再構成
+			If Sokudo < 0 Then SokudoSettei = "s" + Sokudo
+			If Sokudo = 0 Then SokudoSettei = ""
+			If Sokudo > 0 Then SokudoSettei = "s+" + Sokudo
+
+		EndIf
+
+		// 設定文の再構成
+		SetteiBun = EchoSettei
+		If SetteiBun <> "" and SokudoSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SokudoSettei
+		If SetteiBun <> "" and OnryouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + OnryouSettei
+		If SetteiBun <> "" and YokuyouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + YokuyouSettei
+		If SetteiBun <> "" and SeSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SeSettei
+		If SetteiBun <> "" and MaSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + MaSettei
+
+		// 再設定した行をペースト
+		SendStr(0,SerifuBun + "」" + SetteiBun)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：音量の切替(Ctrl+↑)(Ctrl+↓)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure OnryouChange()
+
+	Dim String // 汎用の文字列
+	Dim Count // 汎用のカウント
+	Dim Count2 // 汎用のカウント
+
+	Dim SerifuBun // 台本の一行から取得した、台詞文
+	Dim SetteiBun // 台本の一行から取得した、設定文
+	Dim UpFlag // ↑が押されてたかどうかフラグ
+	Dim Onryou // 音量
+
+	Dim EchoSettei // echoのエコー設定を記憶
+	Dim OnryouSettei // o+10などの音量設定を記憶
+	Dim SokudoSettei // s+10などの速度設定を記憶
+	Dim YokuyouSettei // y+10などの抑揚設定を記憶
+	Dim MaSettei // m=0.3などの間設定を記憶
+	Dim SeSettei // se=効果音.mp3などのSE設定を記憶
+
+	// 押されたキーの判別
+	UpFlag = False
+	If HOTKEY_VK = VK_Up Then UpFlag = True
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Up) = True or GetKeyState(VK_Down) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	SetteiBun = GetStr(0)
+
+	// （音声文）の行が選択されていたら、直前の一行を取得
+	Ifb Pos("（",SetteiBun) = 1 and Pos("）",SetteiBun) > 1 Then
+
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+		SetteiBun = GetStr(0)
+
+	EndIf
+
+	Ifb Pos("「",SetteiBun) > 0 and Copy(SetteiBun,1,3) <> "★SE" Then // 「が有る文で★SE以外を処理
+
+		SerifuBun = AddKakko(SerifuBun) // 」で閉じてなければ」を追加
+
+		// 」前の台詞文をSerifuBunに、」後の設定文をSetteiBunに記憶
+		SerifuBun = Token("」",SetteiBun)
+		While Pos("」",SetteiBun) > 0
+			SerifuBun = SerifuBun + "」" + Token("」",SetteiBun)
+		Wend
+
+		// 設定文から、エコー、速度、音量、抑揚、間、SEを取得
+		EchoSettei = ""
+		SokudoSettei = ""
+		OnryouSettei = ""
+		YokuyouSettei = ""
+		MaSettei = ""
+		SeSettei =""
+		While SetteiBun <> ""
+			String = Token(",",SetteiBun)
+			If String = "echo" Then EchoSettei = String
+			If Copy(String,1,1) = "s" and ChkNum(Copy(String,2)) = True Then SokudoSettei = String
+			If Copy(String,1,1) = "o" and ChkNum(Copy(String,2)) = True Then OnryouSettei = String
+			If Copy(String,1,1) = "y" and ChkNum(Copy(String,2)) = True Then YokuyouSettei = String
+			If Copy(String,1,2) = "m=" Then MaSettei = String
+			If Copy(String,1,3) = "se=" Then SeSettei = String
+		Wend
+
+		// 音量の取得
+		Onryou = 0
+		If OnryouSettei <> "" Then Onryou = Val(Copy(OnryouSettei,2))
+
+		Ifb Onryou <> ERR_VALUE Then // 音量が数値の場合のみ処理
+
+			// 音量の変更
+			If UpFlag = True Then Onryou = Onryou + 10
+			If UpFlag = False Then Onryou = Onryou - 10
+
+			// 音量設定の再構成
+			If Onryou < 0 Then OnryouSettei = "o" + Onryou
+			If Onryou = 0 Then OnryouSettei = ""
+			If Onryou > 0 Then OnryouSettei = "o+" + Onryou
+
+		EndIf
+
+		// 設定文の再構成
+		SetteiBun = EchoSettei
+		If SetteiBun <> "" and SokudoSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SokudoSettei
+		If SetteiBun <> "" and OnryouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + OnryouSettei
+		If SetteiBun <> "" and YokuyouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + YokuyouSettei
+		If SetteiBun <> "" and SeSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SeSettei
+		If SetteiBun <> "" and MaSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + MaSettei
+
+		// 再設定した行をペースト
+		SendStr(0,SerifuBun + "」" + SetteiBun)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：抑揚の切替(Ctrl+Y)(Ctrl+U)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure YokuyouChange()
+
+	Dim String // 汎用の文字列
+	Dim Count // 汎用のカウント
+	Dim Count2 // 汎用のカウント
+
+	Dim SerifuBun // 台本の一行から取得した、台詞文
+	Dim SetteiBun // 台本の一行から取得した、設定文
+	Dim UpFlag // ↑が押されてたかどうかフラグ
+	Dim Yokuyou // 抑揚
+
+	Dim EchoSettei // echoのエコー設定を記憶
+	Dim OnryouSettei // o+10などの音量設定を記憶
+	Dim SokudoSettei // s+10などの速度設定を記憶
+	Dim YokuyouSettei // y+10などの抑揚設定を記憶
+	Dim MaSettei // m=0.3などの間設定を記憶
+	Dim SeSettei // se=効果音.mp3などのSE設定を記憶
+
+	// 押されたキーの判別
+	UpFlag = False
+	If HOTKEY_VK = VK_Y Then UpFlag = True
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Y) = True or GetKeyState(VK_U) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	SetteiBun = GetStr(0)
+
+	// （音声文）の行が選択されていたら、直前の一行を取得
+	Ifb Pos("（",SetteiBun) = 1 and Pos("）",SetteiBun) > 1 Then
+
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+		SetteiBun = GetStr(0)
+
+	EndIf
+
+	Ifb Pos("「",SetteiBun) > 0 and Copy(SetteiBun,1,3) <> "★SE" Then // 「が有る文で★SE以外を処理
+
+		SerifuBun = AddKakko(SerifuBun) // 」で閉じてなければ」を追加
+
+		// 」前の台詞文をSerifuBunに、」後の設定文をSetteiBunに記憶
+		SerifuBun = Token("」",SetteiBun)
+		While Pos("」",SetteiBun) > 0
+			SerifuBun = SerifuBun + "」" + Token("」",SetteiBun)
+		Wend
+
+		// 設定文から、エコー、速度、音量、抑揚、間、SEを取得
+		EchoSettei = ""
+		SokudoSettei = ""
+		OnryouSettei = ""
+		YokuyouSettei = ""
+		MaSettei = ""
+		SeSettei =""
+		While SetteiBun <> ""
+			String = Token(",",SetteiBun)
+			If String = "echo" Then EchoSettei = String
+			If Copy(String,1,1) = "s" and ChkNum(Copy(String,2)) = True Then SokudoSettei = String
+			If Copy(String,1,1) = "o" and ChkNum(Copy(String,2)) = True Then OnryouSettei = String
+			If Copy(String,1,1) = "y" and ChkNum(Copy(String,2)) = True Then YokuyouSettei = String
+			If Copy(String,1,2) = "m=" Then MaSettei = String
+			If Copy(String,1,3) = "se=" Then SeSettei = String
+		Wend
+
+		// 抑揚の取得
+		Yokuyou = 0
+		If YokuyouSettei <> "" Then Yokuyou = Val(Copy(YokuyouSettei,2))
+
+		Ifb Yokuyou <> ERR_VALUE Then // 抑揚が数値の場合のみ処理
+
+			// 抑揚の変更
+			If UpFlag = True Then Yokuyou = Yokuyou + 10
+			If UpFlag = False Then Yokuyou = Yokuyou - 10
+
+			// 抑揚設定の再構成
+			If Yokuyou < 0 Then YokuyouSettei = "y" + Yokuyou
+			If Yokuyou = 0 Then YokuyouSettei = ""
+			If Yokuyou > 0 Then YokuyouSettei = "y+" + Yokuyou
+
+		EndIf
+
+		// 設定文の再構成
+		SetteiBun = EchoSettei
+		If SetteiBun <> "" and SokudoSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SokudoSettei
+		If SetteiBun <> "" and OnryouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + OnryouSettei
+		If SetteiBun <> "" and YokuyouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + YokuyouSettei
+		If SetteiBun <> "" and SeSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SeSettei
+		If SetteiBun <> "" and MaSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + MaSettei
+
+		// 再設定した行をペースト
+		SendStr(0,SerifuBun + "」" + SetteiBun)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：背景の切替(Ctrl++)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure HaikeiChange()
+
+	Dim Index // 汎用のインデックス
+	Dim String // 汎用の文字列
+	Dim SetteiMei // 汎用の設定名
+	Dim SetteiChi // 汎用の設定値
+
+	Dim GyouString // 現在のカーソルがある行の文字列
+	Dim NowHaikei // 現在行の背景
+	Dim NowBGM // 現在行のBGM
+	Dim NowSE // 現在行のSE
+	Dim NowMa // 現在行の間
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Add) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	GyouString = GetStr(0)
+
+	Ifb Replace(Replace(GyouString," ",""),"　","") = "" or Pos("◆",GyouString) > 0 Then // 空行か◆行のみ処理
+
+		// 現在行の設定を取得
+		NowHaikei = ""
+		NowBGM = ""
+		NowMa = ""
+		NowSE = ""
+		Token("◆",GyouString)
+		While GyouString <> ""
+			SetteiMei = Token("=",GyouString)
+			SetteiChi =Token("◆",GyouString)
+			If SetteiMei = "背景" Then NowHaikei = SetteiChi
+			If SetteiMei = "BGM" Then NowBGM = SetteiChi
+			If SetteiMei = "SE" Then NowSE = SetteiChi
+			If SetteiMei = "間" Then NowMa = SetteiChi
+		Wend
+
+		// 間が指定されてない場合はデフォルト間を適用
+		If NowMa = "" Then NowMa = HaikeiBgmMa
+
+		// 現在の背景を検索
+		Index = 1
+		While AryHaikeiFile[Index] <> ""
+			Ifb AryHaikeiFile[Index] = NowHaikei Then
+				Index = Index + 1
+				Break
+			EndIf
+			Index = Index + 1
+		Wend
+		If AryHaikeiFile[Index] = "" Then Index = 1
+
+		// 切替後の行をペースト
+		If AryHaikeiFile[1] <> "" Then String = "◆背景=" + AryHaikeiFile[Index]
+		If NowBGM <> "" Then String = String + "◆BGM=" + NowBGM
+		If NowSE <> "" Then String = String + "◆SE=" + NowSE
+		String = String + "◆間=" + NowMa
+		SendStr(0,String)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：BGMの切替(Ctrl+-)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure BgmChange()
+
+	Dim Index // 汎用のインデックス
+	Dim String // 汎用の文字列
+	Dim SetteiMei // 汎用の設定名
+	Dim SetteiChi // 汎用の設定値
+
+	Dim GyouString // 現在のカーソルがある一行
+	Dim NowHaikei // 現在行の背景
+	Dim NowBGM // 現在行のBGM
+	Dim NowSE // 現在行のSE
+	Dim NowMa // 現在行の間
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Subtract) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	GyouString = GetStr(0)
+
+	Ifb Replace(Replace(GyouString," ",""),"　","") = "" or Pos("◆",GyouString) > 0 Then // 空行か◆行のみ処理
+
+		// 現在行の設定を取得
+		NowHaikei = ""
+		NowBGM = ""
+		NowMa = ""
+		NowSE = ""
+		Token("◆",GyouString)
+		While GyouString <> ""
+			SetteiMei = Token("=",GyouString)
+			SetteiChi =Token("◆",GyouString)
+			If SetteiMei = "背景" Then NowHaikei = SetteiChi
+			If SetteiMei = "BGM" Then NowBGM = SetteiChi
+			If SetteiMei = "SE" Then NowSE = SetteiChi
+			If SetteiMei = "間" Then NowMa = SetteiChi
+		Wend
+
+		// 間が指定されてない場合はデフォルト間を適用
+		If NowMa = "" Then NowMa = HaikeiBgmMa
+
+		// 現在のBGMを検索
+		Index = 1
+		While AryBgmFile[Index] <> ""
+			Ifb AryBgmFile[Index] = NowBGM Then
+				Index = Index + 1
+				Break
+			EndIf
+			Index = Index + 1
+		Wend
+		If AryBgmFile[Index] = "" Then Index = 1
+
+		// 切替後の行をペースト
+		String = ""
+		If NowHaikei <> "" Then String = String + "◆背景=" + NowHaikei
+		If AryBgmFile[1] <> "" Then String = String + "◆BGM=" + AryBgmFile[Index]
+		If NowSE <> "" Then String = String + "◆SE=" + NowSE
+		String = String + "◆間=" + NowMa
+		SendStr(0,String)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：SEの切替(Ctrl+*)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure SeChange()
+
+	Dim Index // 汎用のインデックス
+	Dim String // 汎用の文字列
+	Dim SetteiMei // 汎用の設定名
+	Dim SetteiChi // 汎用の設定値
+
+	Dim GyouString // 現在のカーソルがある一行
+
+	Dim NowHaikei // 現在行の背景
+	Dim NowBGM // 現在行のBGM
+	Dim NowSE // 現在行のSE
+	Dim NowMa // 現在行の間
+
+	Dim SerifuBun // 」以前の台詞文
+	Dim SetteiBun // 」以降の設定
+
+	Dim EchoSettei // echoのエコー設定を記憶
+	Dim OnryouSettei // o+10などの音量設定を記憶
+	Dim SokudoSettei // s+10などの速度設定を記憶
+	Dim MaSettei // m=0.3などの間設定を記憶
+	Dim SeSettei // se=効果音.mp3などのSE設定を記憶
+
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Decimal) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	GyouString = GetStr(0)
+
+	Ifb Copy(Replace(Replace(GyouString," ",""),"　",""),1,2) = "//" Then // コメントアウト行の場合は何もしない
+
+	ElseIf Replace(Replace(GyouString," ",""),"　","") = "" Then // 空白行の場合
+
+		// ★SEの行をペースト
+		SendStr(0,"★SE「" + ArySeFile[1] + "」")
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	ElseIf Copy(Replace(Replace(GyouString," ",""),"　",""),1,3) = "★SE" Then // ★SEの行の場合
+
+		// ★SE「」内のSEファイル名を取得
+		Token("「",GyouString)
+		NowSE = Token("」",GyouString)
+
+		// 次に表示するのSEを検索
+		Index = 1
+		While ArySeFile[Index] <> ""
+			Ifb ArySeFile[Index] = NowSe Then
+				Index = Index + 1
+				Break
+			EndIf
+			Index = Index + 1
+		Wend
+		If ArySeFile[Index] = "" Then Index = 1
+
+		// SE切替後の★SE行をペースト
+		SendStr(0,"★SE「" + ArySeFile[Index] + "」")
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	ElseIf Pos("◆",GyouString) > 0 Then // ◆行の場合
+
+		// 現在行の設定を取得
+		NowHaikei = ""
+		NowBGM = ""
+		NowMa = ""
+		NowSE = ""
+		Token("◆",GyouString)
+		While GyouString <> ""
+			SetteiMei = Token("=",GyouString)
+			SetteiChi =Token("◆",GyouString)
+			If SetteiMei = "背景" Then NowHaikei = SetteiChi
+			If SetteiMei = "BGM" Then NowBGM = SetteiChi
+			If SetteiMei = "SE" Then NowSE = SetteiChi
+			If SetteiMei = "間" Then NowMa = SetteiChi
+		Wend
+
+		// 間が指定されてない場合はデフォルト間を適用
+		If NowMa = "" Then NowMa = HaikeiBgmMa
+
+		// 次に表示するのSEを検索
+		Index = 1
+		While ArySeFile[Index] <> ""
+			Ifb ArySeFile[Index] = NowSe Then
+				Index = Index + 1
+				Break
+			EndIf
+			Index = Index + 1
+		Wend
+		If ArySeFile[Index] = "" Then Index = 1
+
+		// 切替後の行をペースト
+		String = ""
+		If NowHaikei <> "" Then String = String + "◆背景=" + NowHaikei
+		If NowBGM <> "" Then String = String + "◆BGM=" + NowBGM
+		If ArySeFile[1] <> "" Then String = String + "◆SE=" + ArySeFile[Index]
+		String = String + "◆間=" + NowMa
+		SendStr(0,String)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	ElseIf Pos("「",GyouString) > 0 Then // 台詞行の場合
+
+		SetteiBun = AddKakko(GyouString) // 」で閉じてなければ」を追加
+
+		// 」前の台詞文をSerifuBunに、」後の設定文をSetteiBunに記憶
+
+		SerifuBun = Token("」",SetteiBun)
+		While Pos("」",SetteiBun) > 0
+			SerifuBun = SerifuBun + "」" + Token("」",SetteiBun)
+		Wend
+
+		// 設定文から、エコー、速度、音量、SEを取得
+		EchoSettei = ""
+		SokudoSettei = ""
+		OnryouSettei = ""
+		MaSettei = ""
+		SeSettei =""
+		NowSE = ""
+		While SetteiBun <> ""
+			String = Token(",",SetteiBun)
+			If String = "echo" Then EchoSettei = String
+			If Copy(String,1,1) = "s" and ChkNum(Copy(String,2)) = True Then SokudoSettei = String
+			If Copy(String,1,1) = "o" and ChkNum(Copy(String,2)) = True Then OnryouSettei = String
+			If Copy(String,1,2) = "m=" Then MaSettei = String
+			If Copy(String,1,3) = "se=" Then SeSettei = String
+		Wend
+
+		Ifb SeSettei <> "" Then
+
+			// SeSetteiから、現在のSEを取得
+			NowSE = Copy(SeSettei,4)
+
+			// 次に表示するのSEを検索
+			Index = 1
+			While ArySeFile[Index] <> ""
+				Ifb ArySeFile[Index] = NowSE Then
+					Index = Index + 1
+					Break
+				EndIf
+				Index = Index + 1
+			Wend
+			If ArySeFile[Index] = "" Then Index = 1
+
+		Else
+
+			Index = 1
+
+		EndIf
+
+		// 設定文の再構成
+		SetteiBun = EchoSettei
+		If SetteiBun <> "" and SokudoSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + SokudoSettei
+		If SetteiBun <> "" and OnryouSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + OnryouSettei
+		If SetteiBun <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + "se=" + ArySeFile[Index]
+		If SetteiBun <> "" and MaSettei <> "" Then SetteiBun = SetteiBun + ","
+		SetteiBun = SetteiBun + MaSettei
+
+		// SEを再設定した行をペースト
+		SendStr(0,SerifuBun + "」" + SetteiBun)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：辞書登録(Ctrl+J)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure JishoTouroku()
+
+	Dim Index // 汎用のインデックス
+	Dim Index2 // 汎用のインデックス
+	Dim Count // 汎用のカウント
+	Dim String // 汎用の文字列
+	Dim Flag // 汎用のフラグ
+
+	Dim JishoID // 辞書.txtのファイルID
+
+	Dim AryMaeString[9999] // ソート前の辞書.txtの変換前の文字列
+	Dim AryAtoString[9999] // ソート後の辞書.txtの変換後の文字列
+	Dim AryMojisuu[9999] // 変換前文字列の文字数
+	Dim MojisuuMax // 変換前文字列の文字数の最大値
+
+	Dim HenkanMae // 変換前の文字列
+	Dim HenkanGo // 変換後の文字列
+
+	Dim JishoTourokuForm // 辞書登録フォームのCOMオブジェクト
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_J) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在の選択範囲をコピー
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+
+	// コピーした文字列を取得
+	HenkanMae = Replace(Replace(GetStr(0),"　","")," ","")
+
+	// フォームの作成
+	JishoTourokuForm = CreateForm("about:blank","辞書登録",True,FOM_NORESIZE or FOM_TOPMOST,240,152,G_MOUSE_X-60,G_MOUSE_Y+40)
+	JishoTourokuForm.Document.write(FormJishoTouroku)
+
+	// フォームが表示されるまで待機
+	While GetID("辞書登録","TFormhtm",0.1) = -1
+		Sleep(0.1)
+		If GetKeyState(VK_Escape) = True Then StopMacro("[Esc]キーが押された為、Step1.exeを中止します")
+	Wend
+
+	// コピーした文字列を変換前欄に入力
+	SetFormData(HenkanMae,"InputHenkanMae")
+
+	// フォーカスを入力欄に移動
+	Ifb HenkanMae = "" Then // 変換前欄に移動
+		ScKey(GetID("辞書登録","TFormhtm"),VK_Tab)
+	Else // 変換後欄に移動
+		ScKey(GetID("辞書登録","TFormhtm"),VK_Tab)
+		ScKey(GetID("辞書登録","TFormhtm"),VK_Tab)
+	EndIf
+
+	// フォームが表示されている限り待機
+	While JishoTourokuForm.Visible = True
+		Sleep(0.1)
+		If GetKeyState(VK_Escape) = True Then StopMacro("[Esc]キーが押された為、Step1.exeを中止します")
+	Wend
+
+	// フォームの値の取得
+	HenkanMae = Trim(GetFormData("InputHenkanMae"))
+	HenkanGo = Trim(GetFormData("InputHenkanGo"))
+
+	// メモ帳をアクティブに戻す
+	ACW(GetID(ActiveWindow,,0.1))
+
+	// 変換前が入力されていて、登録するボタンが押され場合だけ、辞書.txtに登録を行う
+	Ifb HenkanMae <> "" and GetFormData("BtnJishoTouroku") = True Then
+
+		JishoID = FOpen(GET_CUR_DIR+"\設定\辞書.txt",F_READ or F_WRITE) // 辞書.txtを開きファイルIDを記憶
+
+		// 辞書.txt全行読み込みループ
+		Index = 1
+		Flag = False // 変換前の単語がすでに登録されているかフラグ
+		MojisuuMax = 0
+		For Count = 1 to FGet(JishoID,F_LINECOUNT)
+
+			String = FGet(JishoID,Count)
+			String = Token("/",String)
+			String = Replace(String,"＝","=")
+
+			Ifb Pos("=",String) > 0 Then
+
+				AryMaeString[Index] = Token("=",String)
+				Ifb AryMaeString[Index] = HenkanMae Then
+					AryAtoString[Index] = HenkanGo
+					Flag = True
+				Else
+					AryAtoString[Index] = String
+				EndIf
+				AryMojisuu[Index] = Length(AryMaeString[Index])
+
+				If AryMojisuu[Index] > MojisuuMax Then MojisuuMax = AryMojisuu[Index]
+
+				Index = Index + 1
+			EndIf
+
+		Next
+
+		// フォームに入力した文字を新たに登録する
+		Ifb Flag = False Then
+			AryMaeString[Index] = HenkanMae
+			AryAtoString[Index] = HenkanGo
+			AryMojisuu[Index] = Length(AryMaeString[Index])
+			If AryMojisuu[Index] > MojisuuMax Then MojisuuMax = AryMojisuu[Index]
+		EndIf
+
+		// 文字数降順にソート
+		Index2 = 1
+		For Count = MojisuuMax to 1 step -1
+
+			Index = 1
+			While AryMaeString[Index] <> ""
+
+				Ifb AryMojisuu[Index] = Count Then
+
+					AryHenkanMae[Index2] = AryMaeString[Index]
+					AryHenkanGo[Index2] = AryAtoString[Index]
+					Index2 = Index2 + 1
+
+				EndIf
+
+				Index = Index + 1
+			Wend
+
+		Next
+
+		// 辞書.txtに書き込みループ
+		String = ""
+		Index = 1
+		While AryHenkanMae[Index] <> ""
+			String = String + AryHenkanMae[Index] + "=" + AryHenkanGo[Index] + "<#CR>"
+			Index = Index + 1
+		Wend
+		FPut(JishoID,String,F_ALLTEXT)
+
+		FClose(JishoID) // 辞書.txtを閉じる
+
+	EndIf
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：音声文の追加(Ctrl+Space)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure AddOnseibun()
+
+	Dim Index // 汎用のインデックス
+	Dim String // 汎用の文字列
+	Dim String2 // 汎用の文字列
+	Dim CharaName // 台本の一行から取得した「前のキャラ名
+	Dim SerifuBun // 台本の一行から取得した「」内の台詞文
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Space) = True
+		Sleep(0.1)
+	Wend
+
+	// クリップボードの初期化
+	SendStr(0,"")
+
+	// 現在、マウスカーソルの有る行の一行をコピーし文字列を取得
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+	String = GetStr(0)
+
+	// 「が無い文なら、一行前をコピーし文字列を再取得
+	Ifb Pos("「",String) = 0 Then
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Up)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Home)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Shift,VK_End)
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_C)
+		String = GetStr(0)
+	EndIf
+
+	Ifb Pos("「",String) > 0 Then // 「が有る文のみ処理
+
+		String = AddKakko(String) // 」で閉じてなければ」を追加
+
+		String2 = String // 字幕文を退避
+
+		// 「」内の字幕文を取得
+		CharaName = Token("「",String)
+		SerifuBun = Token("」",String)
+		While Pos("」",String) > 0
+			SerifuBun = SerifuBun + "」" + Token("」",String)
+		Wend
+
+		// 台詞文に辞書を適用して音声文を生成
+		SerifuBun = StrConv(SerifuBun,SC_UPPERCASE)
+		SerifuBun = Replace(SerifuBun,"/","")
+		SerifuBun = Replace(SerifuBun,"　"," ")
+		SerifuBun = Trim(SerifuBun)
+		Index = 1
+		While AryHenkanMae[Index] <> ""
+			SerifuBun = Replace(SerifuBun,StrConv(AryHenkanMae[Index],SC_UPPERCASE),AryHenkanGo[Index])
+			SerifuBun = Replace(SerifuBun,StrConv(StrConv(AryHenkanMae[Index],SC_HALFWIDTH),SC_UPPERCASE),AryHenkanGo[Index])
+			SerifuBun = Replace(SerifuBun,StrConv(StrConv(AryHenkanMae[Index],SC_FULLWIDTH),SC_UPPERCASE),AryHenkanGo[Index])
+			Index = Index + 1
+		Wend
+
+		// 効果を切り替え後の文をペースト
+		SendStr(0,String2 + "<#CR>（" + SerifuBun + "）")
+		ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V)
+
+	EndIf
+
+	// カーソルを行の末尾に移す
+	ScKey(GetID(GET_ACTIVE_WIN),VK_End)
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：最適化(Ctrl+Q)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure Saitekika()
+
+	Dim Index // 汎用のインデックス
+	Dim Count // 汎用のカウント
+	Dim String // 汎用の文字列
+	Dim String2 // 汎用の文字列
+	Dim Flag // 汎用のフラグ
+
+	Dim CharaName // キャラ名
+	Dim SerifuBun // 台詞文
+	Dim SetteiBun // 設定文
+
+	Dim CharaTeigiFlag // 「前のキャラ名が定義されているかのフラグ
+
+	Dim MaSettei // 設定文の間の設定
+	Dim MaAtai // 設定文の間の値
+
+	Dim BeforeText // 変換前の編集中テキスト
+	Dim AfterText // 変換後の編集中テキスト
+
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Q) = True
+		Sleep(0.1)
+	Wend
+
+	// 編集中のメモ帳から、全テキストを取得
+	BeforeText = GetStr(GetID(GET_ACTIVE_WIN))
+
+	// 改行をΜ（ギリシャ字のミュー）に置換
+	BeforeText = Replace(BeforeText,"<#CR>","Μ")
+
+	// どどんとふログ形式かをチェック（：が10個含まれていたら、どどんとふログ形式と判断）
+	Flag = True
+	For Count = 1 to 10
+		If Pos("：",BeforeText,Count) = 0 Then Flag = False
+	Next
+
+	Ifb Flag = True Then // どどんとふログ形式の場合
+
+		// ：形式を、「」の脚本形式に変換
+		AfterText = "Μ"
+		While BeforeText <> ""
+			String = Token("Μ",BeforeText)
+			Ifb Pos("：",String) > 0 Then
+				AfterText = AfterText +  "」Μ" + Replace(String,"：","「")
+			Else
+				AfterText = AfterText + "/" + String
+			EndIf
+		Wend
+		AfterText = AfterText + "」Μ"
+		AfterText = Replace(AfterText,"Μ」Μ","Μ")
+
+		// 二重「「」」を一重に変換
+		BeforeText = AfterText
+		AfterText = ""
+		While BeforeText <> ""
+			String = Token("Μ",BeforeText)
+			Ifb Pos("」」",String) > 0 Then
+				String = Replace(String,"「「","「")
+				String = Replace(String,"」」","」")
+			EndIf
+			AfterText = AfterText + String + "Μ"
+		Wend
+
+	Else // どどんとふログ形式以外の場合
+
+		// Step1脚本形式への最適化
+		AfterText = ""
+		While BeforeText <> ""
+
+			// 各行を最適化
+			String = Token("Μ",BeforeText)
+			String2 = String
+			Ifb Copy(Replace(Replace(String,"　","")," ",""),1,2) = "//" Then // コメントアウトはそのまま
+
+				SerifuBun = ""
+				AfterText = AfterText + String + "Μ"
+
+			ElseIf Pos("「",String) > 0 and Pos("」",String) > Pos("「",String) Then // 「」で閉じられている場合
+
+				CharaName = Replace(Replace(Token("「",String),"　","")," ","")
+				CharaTeigiFlag = False
+				Ifb CharaName = "" Then
+					CharaName = AryCharaTeigi[1]
+					If AryCharaTeigi[2] <> "" Then CharaName = AryCharaTeigi[2]
+					CharaTeigiFlag = True
+				Else
+					Index = 1
+					While AryCharaTeigi[Index] <> ""
+						Ifb AryCharaTeigi[Index] = CharaName Then
+							CharaTeigiFlag = True
+							Break
+						EndIf
+						Index = Index + 1
+					Wend
+					Ifb CharaTeigiFlag = False Then
+						CharaName = AryCharaTeigi[1]
+						String = String2
+					EndIf
+				EndIf
+
+				Ifb CharaTeigiFlag = True Then
+					SerifuBun = Token("」",String)
+					SetteiBun = String
+					AfterText = AfterText + CharaName + "「" + SerifuBun + "」" + SetteiBun + "Μ"
+				Else
+					SerifuBun = String
+					AfterText = AfterText + CharaName + "「" + SerifuBun + "」" + "Μ"
+				EndIf
+
+			ElseIf Pos("「",String) > 0 Then // 「は有るが、」で閉じられてない場合
+
+				CharaName = Replace(Replace(Token("「",String),"　","")," ","")
+				Ifb CharaName = "" Then
+					CharaName = AryCharaTeigi[1]
+					If AryCharaTeigi[2] <> "" Then CharaName = AryCharaTeigi[2]
+					CharaTeigiFlag = True
+				EndIf
+				SerifuBun = String
+				AfterText = AfterText + CharaName + "「" + SerifuBun + "」Μ"
+
+			ElseIf Pos("（",String) > 0 and Pos("）",String) > Pos("（",String) Then // （）で閉じられている場合
+
+				String = Replace(String,"（"," ")
+				String = Replace(String,"）"," ")
+				SerifuBun = Trim(String)
+				AfterText = AfterText + "Μ+Μ" + String2 + "Μ"
+
+			ElseIf Pos("◆",String) > 0 Then // ◆行は前後に空改行
+
+				SerifuBun = ""
+				AfterText = AfterText + "Μ-Μ" + String + "Μ-Μ"
+
+			ElseIf Replace(Replace(String,"　","")," ","") = "" Then // 空改行の場合は、そのまま空改行
+
+				SerifuBun = ""
+				AfterText = AfterText + "Μ"
+
+			Else // 上記以外の「」で閉じられていない行は、「」をで囲みナレーターの台詞にする
+
+				CharaName = AryCharaTeigi[1]
+				SerifuBun = String
+				AfterText = AfterText + CharaName + "「" + SerifuBun + "」Μ"
+
+			EndIf
+
+			// 。等で終わる台詞は、後に空改行を付けるように処理
+			Ifb SerifuBun <> "" Then
+
+				MaAtai = 0
+				While SetteiBun <> ""
+					MaSettei = Token(",",SetteiBun)
+					Ifb Copy(MaSettei,1,1) = "m" Then
+						MaAtai = Val(Copy(MaSettei,3))
+						Break
+					EndIf
+				Wend
+
+				Ifb MaAtai >= 0 Then
+
+					If MaAtai > 0 Then
+						AfterText = AfterText + "-Μ"
+					Else
+						String = Copy(SerifuBun,Length(SerifuBun))
+						String = StrConv(String,SC_FULLWIDTH)
+						If String = "．" Then AfterText = AfterText + "-Μ"
+						If String = "。" Then AfterText = AfterText + "-Μ"
+						If String = "！" Then AfterText = AfterText + "-Μ"
+						If String = "？" Then AfterText = AfterText + "-Μ"
+						If String = "・" Then AfterText = AfterText + "-Μ"
+						If String = "…" Then AfterText = AfterText + "-Μ"
+					EndIf
+
+				Else
+
+					AfterText = AfterText + "+Μ"
+
+				EndIf
+
+			EndIf
+
+		Wend
+
+		// 改行文字の整理
+		AfterText = Replace(AfterText,"Μ-ΜΜΜ+Μ","Μ")
+		AfterText = Replace(AfterText,"Μ-ΜΜ+Μ","Μ")
+		AfterText = Replace(AfterText,"ΜΜΜ+Μ","Μ")
+		AfterText = Replace(AfterText,"ΜΜ+Μ","Μ")
+		AfterText = Replace(AfterText,"Μ-ΜΜΜ-Μ","ΜΜ")
+		AfterText = Replace(AfterText,"Μ-ΜΜ-Μ","ΜΜ")
+		AfterText = Replace(AfterText,"ΜΜΜ-Μ","ΜΜ")
+		AfterText = Replace(AfterText,"ΜΜ-Μ","ΜΜ")
+		AfterText = Replace(AfterText,"Μ-ΜΜ","ΜΜ")
+		AfterText = Replace(AfterText,"Μ-Μ","ΜΜ")
+		AfterText = Replace(AfterText,"Μ+ΜΜ","Μ")
+		AfterText = Replace(AfterText,"Μ+Μ","Μ")
+
+		// 先頭行の余分な空改行を削除
+		While Copy(AfterText,1,2) = "ΜΜ"
+			Token("Μ",AfterText)
+		Wend
+
+	EndIf
+
+	// 改行文字を元に戻す
+	AfterText = Replace(AfterText,"Μ","<#CR>")	
+
+	// 編集中の全テキストを変換後のテキストに置換
+	SendStr(0,AfterText)
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_A) // 全選択
+	ScKey(GetID(GET_ACTIVE_WIN),VK_Ctrl,VK_V) // 貼り付け
+
+	// どどんとふ形式からの最適化に対する注意
+	If Flag = True Then MsgBox("どどんとふ形式から、Step1脚本形式に変換しました。<#CR><#CR>もう一度、[Ctrl]+[Q]を押すと更に脚本の形が整いますが、<#CR>その前に、登場するキャラを「登場人物.txt」に定義する必要があります。<#CR><#CR>キャラが定義されてない状態で[Ctrl]+[Q]を再実行すると、<#CR>脚本の形が崩れてしまいますので、ご注意ください。")
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：登場人物(Ctrl+T)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure OpenChara()
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_T) = True
+		Sleep(0.1)
+	Wend
+
+	Ifb GetID("登場人物","Notepad",0.1) = -1 Then // 登場人物.txtが開かれて無ければ
+
+		// 登場人物.txtをメモ帳で開く
+		Exec("notepad.exe " + GET_CUR_DIR + "\設定\登場人物.txt")
+
+	Else // 既に登場人物.txtがメモ帳で開かれていた場合
+
+		// 登場人物.txtをアクティベート
+		CtrlWin(GetID("登場人物","Notepad",0.1),ACTIVATE)
+
+	EndIf
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：台本出力(Ctrl+Enter)
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure OutputDaihon()
+
+	Dim Index // 汎用のインデックス
+	Dim Index2 // 汎用のインデックス
+	Dim String // 汎用の文字列
+	Dim String2 // 汎用の文字列
+
+	Dim SetteiMei // 汎用の設定名
+	Dim SetteiChi // 汎用の設定値
+
+	Dim DougaTitle // 編集中のメモ帳のファイル名より取得した動画タイトル
+
+	Dim MaCount // 間の空白行をカウント
+
+	Dim Kyakuhon // メモ帳で編集中の脚本の文字列
+	Dim Daihon // 台本.txtに記入する台本の文字列
+
+	Dim ToujouCharaString // 脚本内に登場したキャラを-で連結してつないだ文字列
+
+	Dim AryCharaName[999] // キャラ名を記憶
+	Dim AryJimakuBun[999] // 字幕文を記憶
+	Dim AryOnseiBun[999] // 音声文を記憶
+
+	Dim AryEcho[999] // エコー設定を記憶
+	Dim ArySokudo[999] // 速度を記憶
+	Dim AryOnryou[999] // 音量を記憶
+	Dim AryYokuyou[999] // 抑揚を記憶
+	Dim AryHaikei[999] // 背景を記憶
+	Dim AryBgm[999] // BGMを記憶
+	Dim ArySe[999] // SEを記憶
+	Dim AryMa[999] // 間を記憶
+
+	Dim DaihonID // 台本.txtのファイルID
+
+
+	// ショートカットが離されるまで待機
+	While GetKeyState(VK_Ctrl) = True or GetKeyState(VK_Enter) = True
+		Sleep(0.1)
+	Wend
+
+	// 編集中の脚本ファイル名を取得し、無題の場合は台本出力を中止
+	String = Status(GetID(GET_ACTIVE_WIN),ST_TITLE)
+	DougaTitle = Token("-",String)
+	DougaTitle = Copy(DougaTitle,1,Length(DougaTitle)-1)
+	If Pos(".",DougaTitle) > 0 Then DougaTitle = Token(".",DougaTitle)
+	Ifb DougaTitle = "無題" Then
+		MsgBox("メモ帳で編集中のファイルが保存されてない為、台本出力を中止します。<#CR><#CR>編集中のファイルを「動画のタイトル」のファイル名で保存してから、<#CR>再度、[Ctrl]+[Enter]：台本出力を実行して下さい。")
+		Exit
+	EndIf
+
+	// ショートカット一覧の非表示
+	String = "◇台本出力中<#CR><#CR>"
+	String = String + "[ESC]キー：中止"
+	Fukidasi(String,0,0,,,,,$ccaaff)
+
+	// 編集中の脚本を取得
+	Kyakuhon = Replace(GetStr(GetID(GET_ACTIVE_WIN)),"<#CR>","Μ") // 改行をΜ（ギリシャ字のミュー）に置換
+
+	// 脚本の内容を各配列に格納
+	Index = 0
+	MaCount = 0
+	ToujouCharaString = "-"
+	While Kyakuhon <> ""
+
+		String = Token("Μ",Kyakuhon) // 脚本から一行取得
+
+		String = Replace(String,"(","（") // 音声文の半角()を全角（）に変換
+		String = Replace(String,")","）")
+
+		Ifb Copy(Replace(StrConv(String,SC_HALFWIDTH)," ",""),1,2) = "//" Then // コメントアウトの場合は何もしない
+
+		ElseIf Pos("「",String) > 0 and Pos("」",String) > Pos("「",String) Then
+
+			Ifb AryMa[Index] = "" Then // 背景BGM行で既に間を代入していなければ
+
+				// 前回台詞の間を設定
+				If MaCount = 1 Then
+					If IchiGyouMa <> "" Then AryMa[Index] = ",間=" + IchiGyouMa
+				ElseIf MaCount = 2 Then
+					If NiGyouMa <> "" Then AryMa[Index] = ",間=" + NiGyouMa
+				ElseIf MaCount >= 3 Then
+					If SanGyouMa <> "" Then AryMa[Index] = ",間=" + SanGyouMa
+				EndIf
+				If AryMa[Index] = ",間=0" Then AryMa[Index] = ""
+
+			EndIf
+
+			MaCount = 0 // 間カウントのリセット
+
+			Index = Index + 1
+
+			AryCharaName[Index] = Token("「",String)
+
+			AryJimakuBun[Index] = Token("」",String)
+			While Pos("」",String) > 0
+				AryJimakuBun[Index] = AryJimakuBun[Index] + "」" + Token("」",String)
+			Wend
+
+			// 一行に収まらない文字数の台詞の場合は、「、。」の後に「/」を付ける
+			String2 = ""
+			While AryJimakuBun[Index] <> ""
+				Ifb Pos("/",Copy(AryJimakuBun[Index],1,KyouseiKaigyou)) > 0 Then
+					String2 = String2 + Copy(AryJimakuBun[Index],1,Pos("/",Copy(AryJimakuBun[Index],1,KyouseiKaigyou)))
+					AryJimakuBun[Index] = Copy(AryJimakuBun[Index],Pos("/",Copy(AryJimakuBun[Index],1,KyouseiKaigyou))+1)
+				ElseIf Pos("。",Copy(AryJimakuBun[Index],1,KyouseiKaigyou),-1) >= JidouKaigyou and Length(AryJimakuBun[Index]) > KyouseiKaigyou Then
+					String2 = String2 + Copy(AryJimakuBun[Index],1,Pos("。",Copy(AryJimakuBun[Index],1,KyouseiKaigyou),-1)) + "/"
+					AryJimakuBun[Index] = Copy(AryJimakuBun[Index],Pos("。",Copy(AryJimakuBun[Index],1,KyouseiKaigyou),-1)+1)
+				ElseIf Pos("、",Copy(AryJimakuBun[Index],1,KyouseiKaigyou),-1) >= JidouKaigyou and Length(AryJimakuBun[Index]) > KyouseiKaigyou Then
+					String2 = String2 + Copy(AryJimakuBun[Index],1,Pos("、",Copy(AryJimakuBun[Index],1,KyouseiKaigyou),-1)) + "/"
+					AryJimakuBun[Index] = Copy(AryJimakuBun[Index],Pos("、",Copy(AryJimakuBun[Index],1,KyouseiKaigyou),-1)+1)
+				Else
+					String2 = String2 + Copy(AryJimakuBun[Index],1,KyouseiKaigyou) + "/"
+					AryJimakuBun[Index] = Copy(AryJimakuBun[Index],KyouseiKaigyou+1)
+				EndIf
+			Wend
+			AryJimakuBun[Index] = Copy(String2,1,Length(String2)-1)
+
+			AryOnseiBun[Index] = Replace(AryJimakuBun[Index],"/","")
+			AryOnseiBun[Index] = Replace(AryOnseiBun[Index],"　"," ")
+			AryOnseiBun[Index] = Trim(AryOnseiBun[Index])
+
+			// 音声文の英字を大文字に変換
+			AryOnseiBun[Index] = StrConv(AryOnseiBun[Index],SC_UPPERCASE)
+
+			// 音声文を辞書変換
+			Index2 = 1
+			While AryHenkanMae[Index2] <> ""
+				AryOnseiBun[Index] = Replace(AryOnseiBun[Index],StrConv(AryHenkanMae[Index2],SC_UPPERCASE),AryHenkanGo[Index2])
+				AryOnseiBun[Index] = Replace(AryOnseiBun[Index],StrConv(StrConv(AryHenkanMae[Index2],SC_HALFWIDTH),SC_UPPERCASE),AryHenkanGo[Index2])
+				AryOnseiBun[Index] = Replace(AryOnseiBun[Index],StrConv(StrConv(AryHenkanMae[Index2],SC_FULLWIDTH),SC_UPPERCASE),AryHenkanGo[Index2])
+				Index2 = Index2 + 1
+			Wend
+
+			// 」以降の設定を取得
+			While String <> ""
+				String2 = Token(",",String)
+				If String2 = "echo" Then AryEcho[Index] = ",効果=エコー"
+				If Copy(String2,1,1) = "s" and Val(Copy(String2,2)) <> ERR_VALUE Then ArySokudo[Index] = ",速度=" + (Val(HtbSokudo[AryCharaName[Index]]) + Val(Copy(String2,2)))
+				If Copy(String2,1,1) = "o" and Val(Copy(String2,2)) <> ERR_VALUE Then AryOnryou[Index] = ",音量=" + (Val(HtbOnryou[AryCharaName[Index]]) + Val(Copy(String2,2)))
+				If Copy(String2,1,1) = "y" and Val(Copy(String2,2)) <> ERR_VALUE and HtbYokuyou[AryCharaName[Index],HASH_EXISTS] = True Then AryYokuyou[Index] = ",抑揚=" + (Val(HtbYokuyou[AryCharaName[Index]]) + Val(Copy(String2,2)))
+				If Copy(String2,1,3) = "se=" and ArySe[Index] = "" Then ArySe[Index] = ",SEファイル=" + Copy(String2,4)
+				Ifb Copy(String2,1,2) = "m=" Then
+					If StrConv(StrConv(Copy(String2,3),SC_HALFWIDTH),SC_LOWERCASE) = "d" Then
+						AryMa[Index] = ",間=同時"
+					Else
+						AryMa[Index] = ",間=" + Val(Copy(String2,3))
+					EndIf
+				EndIf
+			Wend
+
+			// 最初の台詞文にキャラ名が記入されているかどうかチェック
+			Ifb AryCharaName[1] = "" Then
+				MsgBox("一番最初の台詞文にキャラ名が記入されて無い為、台本出力を中止します。")
+				Exit
+			EndIf
+
+			Ifb AryCharaName[Index] <> "★SE" Then
+
+				// 脚本に登場したキャラを文字列に記憶
+				If Pos("-" + AryCharaName[Index] + "-",ToujouCharaString) = 0 Then ToujouCharaString = ToujouCharaString + AryCharaName[Index] + "-"
+
+				// キャラ名が空欄なら前回のキャラを代入
+				If AryCharaName[Index] = "" Then AryCharaName[Index] = AryCharaName[Index-1]
+
+				// キャラ名が登場人物.txtで定義されたキャラかどうかチェック
+				Ifb HtbCharaSettei[AryCharaName[Index],HASH_EXISTS] = False Then
+					MsgBox("キャラ名「" + AryCharaName[Index] + "」は登場人物.txtで定義されたキャラではない為、台本出力を中止します。")
+					Exit
+				EndIf
+
+			EndIf
+
+		ElseIf Pos("（",String) > 0 and Pos("）",String) > Pos("（",String) Then
+
+			Token("（",String)
+			AryOnseiBun[Index] = Token("）",String)
+
+		ElseIf Pos("◆",String) > 0 Then // ◆を含む背景BGM行の場合は
+
+			Token("◆",String)
+			While String <> ""
+				SetteiChi = Token("◆",String)
+				SetteiMei = Token("=",SetteiChi)
+				If SetteiMei = "背景" Then AryHaikei[Index+1] = ",背景ファイル=" + SetteiChi
+				If SetteiMei = "BGM" Then AryBgm[Index+1] = ",BGMファイル=" + SetteiChi + ",BGM音量=20"
+				If SetteiMei = "SE" Then ArySe[Index+1] = ",SEファイル=" + SetteiChi
+				If SetteiMei = "間" Then AryMa[Index] = ",間=" + SetteiChi
+			Wend
+
+		ElseIf Replace(StrConv(String,SC_HALFWIDTH)," ","") = "" Then // 空改行の場合は
+
+			MaCount = MaCount + 1 // 間カウントを追加
+
+		EndIf
+
+	Wend
+
+	// ◎動画タイトルを記入
+	Daihon = "◎" + DougaTitle + "<#CR><#CR>"
+
+	// ※共通行を記入
+	Daihon = Daihon + "※共通" + HtbCharaSettei["共通"] + "<#CR><#CR>"
+
+	// ※キャラ行を記入
+	Index = 1
+	While AryCharaTeigi[Index] <> "" and Index < 999
+		If Pos("-"+AryCharaTeigi[Index]+"-",ToujouCharaString) > 0 Then Daihon = Daihon + "※" + HtbCharaSettei[AryCharaTeigi[Index]] + "<#CR>"
+		Index = Index + 1
+	Wend
+	Daihon = Daihon + "<#CR>"
+
+	// ◆行と◆行と[字幕]と[音声]を記入
+	Index = 1
+	While AryCharaName[Index] <> ""
+
+		// 前の台詞に間が有る場合、空改行を記入
+		String = AryMa[Index-1]
+		Token("=",String)
+		If Val(String) > 0 Then Daihon = Daihon + "<#CR>" 
+
+		Ifb AryCharaName[Index] = "★SE"
+
+			// ◇行の記入
+			Daihon = Daihon + "◇SEファイル=" + AryJimakuBun[Index] + AryMa[Index] + "<#CR>"
+
+		Else
+
+			// ◆行の記入
+			Daihon = Daihon + "◆" + AryCharaName[Index] + ArySokudo[Index] + AryOnryou[Index] + AryYokuyou[Index] + AryEcho[Index] + AryHaikei[Index] + AryBgm[Index] + ArySe[Index] + AryMa[Index] + "<#CR>"
+
+			// [字幕]行の記入
+			Ifb KakkoJimaku = 1 and AryCharaName[Index] <> "Ｎ" Then
+				Daihon = Daihon + "[字幕]「" + Replace(AryJimakuBun[Index],"/","<#CR>[字幕]") + "」<#CR>"
+			Else
+				Daihon = Daihon + "[字幕]" + Replace(AryJimakuBun[Index],"/","<#CR>[字幕]") + "<#CR>"
+			EndIf
+
+			// [音声]行の記入
+			Daihon = Daihon + "[音声]" + AryOnseiBun[Index] + "<#CR>"
+
+		EndIf
+
+		Index = Index + 1
+	Wend
+
+	// 台本.txtを開いて記入
+	DaihonID = FOpen(nicotalkFolder+"\台本.txt",F_WRITE)
+	FPut(DaihonID,Daihon,F_ALLTEXT)
+	FClose(DaihonID)
+
+	// 台本出力の完了メッセージ
+	Ifb MsgBox("編集中の内容を、台本.txtに上書きしました。<#CR><#CR>このまま、Step2とStep3を実行しますか？",BTN_YES or BTN_NO) = BTN_YES Then
+
+		// AviUtlが起動していれば、起動している数だけ閉じる
+		While GetID("Hz.exedit","AviUtl",0.1) <> -1
+			CtrlWin(GetID("Hz.exedit","AviUtl",0.1),Close)
+			Sleep(0.5)
+		Wend
+
+// VoiceVox＋COEIROINKの取り合えず動けばいいレベルの修正
+		If VVFLAG = 1 then
+			dim vvid = 0
+			vvid =  GetID("voicevox","Chrome_WidgetWin_1",0.1)
+			If vvid <> -1 then
+				dim str
+				str = GETSTR(vvid, 0, STR_STATIC)
+				If str <> "voicevox" then // COEIRO側が起動していてもVOICEVOXが起動していなければ起動
+					VVFLAG=2
+				EndIf
+			Else // VoiceVox 関連が起動していない場合
+				VVFLAG=2
+			EndIf
+		EndIf
+		If VVFLAG = 2 then
+			Exec(VOICEVOX) // VoiceVoxを事前起動(パスは書き換えて使ってください)
+			Sleep(Wait4VVen) // エンジン起動の待ち時間はマシンによって変更してください。
+			vvid = GetID("voicevox","Chrome_WidgetWin_1",0.1) //閉じるときに使う用。閉じる直前だとおかしい値がとれるのでここで入れておく。GetIDの第一引数は完全一致が優先。のはず・・・
+		EndIf
+		
+		If VVFLAG2 = 1 then
+			If GetID("voicevox-modified-by-shirowanisan","Chrome_WidgetWin_1",0.1) = -1 then
+				Exec(COEIROINK) //COEIROINKを事前起動(パスは書き換えて使ってください)
+				VVFLAG2=2 // 今回開いたよという情報に変える
+				Sleep(Wait4VVen) // エンジン起動の待ち時間はマシンによって変更してください。
+			EndIf
+		EndIf
+// ここまで
+
+		// Step2.exeを実行
+		Exec(nicotalkFolder + "\Step2.exe")
+
+		// Step2正常終了ダイアログが表示されるまで待機し、ダイアログを閉じる
+		While GetID("Step2正常終了","TFormhtm",0.1) = -1
+
+			// 新たに作成すべき音声がないのメッセージが表示された場合の対処
+			Ifb GetID("新たに作成すべき音声がない","TFormhtm",0.1) <> -1 Then
+
+				// 新たに作成すべき音声がないダイアログが表示されるまで待機し、ダイアログにいいえを押す
+				While GetID("Step2","TUmsgDlg_uwsc",0.1) = -1
+					Sleep(0.1)
+					If GetKeyState(VK_Escape) = True Then StopMacro("[Esc]キーが押された為、Step1.exeを中止します")
+				Wend
+				ClkItem(GetID("Step2"),"いいえ",CLK_BTN)
+
+			EndIf
+			Sleep(0.1)
+			If GetID("Step2","TUmsgDlg_uwsc",0.1) <> -1 Then Exit
+			If GetKeyState(VK_Escape) = True Then StopMacro("[Esc]キーが押された為、Step1.exeを中止します")
+		Wend
+
+		// Step2.exeの完了ダイアログが表示されるまで待機し、ダイアログにOKを押す
+		While GetID("Step2","TUmsgDlg_uwsc",0.1) = -1
+			Sleep(0.1)
+			If GetKeyState(VK_Escape) = True Then StopMacro("[Esc]キーが押された為、Step1.exeを中止します")
+		Wend
+		ClkItem(GetID("Step2","TUmsgDlg_uwsc"),"OK",CLK_BTN)
+		
+// VoiceVoxとCOEIROINKの終了処理
+// 閉じちゃう(もともと開いていたら閉じない)
+		If VVFLAG = 2 then
+			CtrlWin(vvid,close)
+		EndIf
+		If VVFLAG2 = 2 then
+			If GetID("voicevox-modified-by-shirowanisan","Chrome_WidgetWin_1",0.1) <> -1 then
+				CtrlWin(GetID("voicevox-modified-by-shirowanisan","Chrome_WidgetWin_1",0.1),close)
+			EndIf
+		EndIf
+//ここまで
+		
+		// Step3.exeを実行
+		Exec(nicotalkFolder + "\Step3.exe",True)
+
+	EndIf
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：間と字幕.txtの取得
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure GetMaJimaku()
+
+	Dim Index // 汎用のインデックス
+	Dim Count // 汎用のカウント
+	Dim String // 汎用の文字列
+
+	Dim SetteiMei // 設定名
+	Dim SetteiChi // 設定値
+
+	Dim MaJimakuID // 字幕.txtのファイルID
+
+
+	MaJimakuID = FOpen(GET_CUR_DIR+"\設定\間と字幕.txt",F_READ) // 間と字幕.txtを開きファイルIDを記憶
+
+	// 間と字幕.txt全行読み込みループ
+	Index = 1
+	For Count = 1 to FGet(MaJimakuID,F_LINECOUNT)
+
+		String = FGet(MaJimakuID,Count)
+		SetteiMei = Token("「",String)
+		SetteiChi = Token("」",String)
+
+		Ifb Replace(Replace(Copy(SetteiMei,1,2),"　","")," ","") = "//"  Then
+
+		ElseIf SetteiMei = "１行の間" Then
+
+			SetteiChi = StrConv(SetteiChi,SC_HALFWIDTH)
+			IchiGyouMa = 0.5
+			If ChkNum(SetteiChi) = True Then IchiGyouMa = Val(SetteiChi)
+
+		ElseIf SetteiMei = "２行の間" Then
+
+			SetteiChi = StrConv(SetteiChi,SC_HALFWIDTH)
+			NiGyouMa = 1.0
+			If ChkNum(SetteiChi) = True Then NiGyouMa= Val(SetteiChi)
+
+		ElseIf SetteiMei = "３行の間" Then
+
+			SetteiChi = StrConv(SetteiChi,SC_HALFWIDTH)
+			SanGyouMa = 2.0
+			If ChkNum(SetteiChi) = True Then SanGyouMa = Val(SetteiChi)
+
+		ElseIf SetteiMei = "背景BGMの初期値" Then
+
+			SetteiChi = StrConv(SetteiChi,SC_HALFWIDTH)
+			HaikeiBgmMa = 9.0
+			If ChkNum(SetteiChi) = True Then HaikeiBgmMa = Val(SetteiChi)
+
+		ElseIf SetteiMei = "微調整の初期値" Then
+
+			SetteiChi = StrConv(SetteiChi,SC_HALFWIDTH)
+			BichouseiMa = 0.3
+			Ifb ChkNum(SetteiChi) = True Then
+				BichouseiMa = Val(SetteiChi)
+			Else
+				BichouseiMa = "d"
+			EndIf
+
+		ElseIf SetteiMei = "自動改行" Then
+
+			SetteiChi = StrConv(SetteiChi,SC_HALFWIDTH)
+			JidouKaigyou = 10
+			If ChkNum(SetteiChi) = True Then JidouKaigyou = Val(SetteiChi)
+
+		ElseIf SetteiMei = "強制改行" Then
+
+			SetteiChi = StrConv(SetteiChi,SC_HALFWIDTH)
+			KyouseiKaigyou = 34
+			If ChkNum(SetteiChi) = True Then KyouseiKaigyou = Val(SetteiChi)
+
+		ElseIf SetteiMei = "字幕X" Then
+
+			JimakuX = Val(SetteiChi)
+			HtbCharaSettei["共通"] = HtbCharaSettei["共通"] + "," + SetteiMei + "=" + SetteiChi
+
+		ElseIf SetteiMei = "括弧字幕" Then
+
+			KakkoJimaku = Val(SetteiChi)
+
+		ElseIf Replace(Replace(SetteiMei,"　","")," ","") = "" Then
+
+		Else
+
+			HtbCharaSettei["共通"] = HtbCharaSettei["共通"] + "," + SetteiMei + "=" + SetteiChi
+
+		EndIf
+
+	Next
+
+	FClose(MaJimakuID) // 字幕.txtを閉じる
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：登場人物.txtの取得
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure GetChara()
+
+	Dim Gyou // 汎用の行
+	Dim Index // 汎用のインデックス
+	Dim String // 汎用の文字列
+	Dim String2 // 汎用の文字列
+	Dim Setteichi // 汎用の設定値
+
+	Dim JimakuMode // 字幕=○○の○○を記憶
+	Dim CharaXSettei // キャラX設定を記憶
+	Dim JimakuSettei // 字幕X設定を記憶
+
+	Dim ToujoujinbutsuID // 登場人物.txtのファイルID
+
+
+	// 登場人物.txtのファイルIDを取得
+	ToujoujinbutsuID = FOpen(GET_CUR_DIR+"\設定\登場人物.txt",F_READ)
+
+	// 登場人物.txtよりキャラ設定を取得
+	Index = 0
+	AryCharaTeigi[0] = "共通"
+	For Gyou = 1 to FGet(ToujoujinbutsuID,F_LINECOUNT)
+
+		String = FGet(ToujoujinbutsuID,Gyou)
+		If Pos("//",String) > 0 Then String = Copy(String,1,Pos("//",String)-1) // コメントアウトより左の文字列に変換
+		If Pos("】",String) > 0 Then Token("】",String) // 】より右の文字列に変換
+		If Pos("声質",String) > 0 Then
+			String = Replace(String," 声質","声質") // For VoiceVox
+			If Pos("VOICEVOX",String) > 0 then
+				If Pos("つくよみちゃん",String) > 0 then // 以降の分岐はCOEIROINKに追加されたら追加しないといけない
+					VVFLAG2=1
+				Elseif Pos("MANA",String) > 0 then
+					VVFLAG2=1
+				Elseif Pos("おふとんP",String) > 0 then
+					VVFLAG2=1
+				Elseif Pos("ディアちゃん",String) > 0 then
+					VVFLAG2=1
+				Elseif Pos("アルマちゃん",String) > 0 then
+					VVFLAG2=1
+				Endif
+				VVFLAG=1
+				
+			Endif
+		Else
+			String = Replace(String," ","") // 半角スペースを削除
+		EndIf
+
+		Ifb String <> "" Then
+
+			Ifb Pos("キャラ名",String) > 0 Then
+				String2 = String
+				While Token("=",String2) <> "キャラ名"
+					Token(",",String2)
+				Wend
+				Index = Index + 1
+				AryCharaTeigi[Index] = Trim(Token(",",String2),True)
+			EndIf
+
+			Ifb Pos("速度",String) > 0 Then
+				String2 = String
+				While Token("=",String2) <> "速度"
+					Token(",",String2)
+				Wend
+				Setteichi = Val(Token(",",String2))
+				If Setteichi <> ERR_VALUE Then HtbSokudo[AryCharaTeigi[Index]] = Setteichi
+			EndIf
+
+			Ifb Pos("音量",String) > 0 Then
+				String2 = String
+				While Token("=",String2) <> "音量"
+					Token(",",String2)
+				Wend
+				Setteichi = Val(Token(",",String2))
+				If Setteichi <> ERR_VALUE Then HtbOnryou[AryCharaTeigi[Index]] = Setteichi
+			EndIf
+
+			Ifb Pos("抑揚",String) > 0 Then
+				String2 = String
+				While Token("=",String2) <> "抑揚"
+					Token(",",String2)
+				Wend
+				Setteichi = Val(Token(",",String2))
+				Ifb Setteichi <> ERR_VALUE Then
+					Ifb SetteiChi < 1 Then
+						HtbYokuyou[AryCharaTeigi[Index]] = Setteichi*200
+					Else
+						HtbYokuyou[AryCharaTeigi[Index]] = Setteichi
+					EndIf
+				EndIf
+			EndIf
+
+			If HtbCharaSettei[AryCharaTeigi[Index]] = "" Then HTbCharaSettei[AryCharaTeigi[Index]] = HtbCharaSettei[AryCharaTeigi[Index]] + AryCharaTeigi[Index]
+			HtbCharaSettei[AryCharaTeigi[Index]] = HtbCharaSettei[AryCharaTeigi[Index]] + "," + Replace(String,"キャラ名="+AryCharaTeigi[Index]+",","") // 台本の※行に書き込むためのキャラ設定を記憶
+
+		EndIf
+
+	Next
+	PageMax = 1 + Int((Index-1)/9)
+
+	If AryCharaTeigi[1] = "" Then StopMacro("登場人物.txtに「キャラ名」の設定が無い為、中止します。")
+
+	// 「字幕」の設定により「字幕X」を書き換え
+	Index = 1
+	While AryCharaTeigi[Index] <> ""
+
+		// 字幕設定の取得
+		Ifb Pos("字幕=",HtbCharaSettei[AryCharaTeigi[Index]]) > 0 Then
+			String = Copy(HtbCharaSettei[AryCharaTeigi[Index]],Pos("字幕=",HtbCharaSettei[AryCharaTeigi[Index]])+3)
+			JimakuMode = Token(",",String)
+		EndIf
+
+		// 立ち絵X設定の取得
+		Ifb Pos("立ち絵X=",HtbCharaSettei[AryCharaTeigi[Index]]) > 0 Then
+			String = Copy(HtbCharaSettei[AryCharaTeigi[Index]],Pos("立ち絵X=",HtbCharaSettei[AryCharaTeigi[Index]])+5)
+			CharaXSettei = Val(Token(",",String))
+		EndIf
+
+		// キャラX設定の取得
+		Ifb Pos("キャラX=",HtbCharaSettei[AryCharaTeigi[Index]]) > 0 Then
+			String = Copy(HtbCharaSettei[AryCharaTeigi[Index]],Pos("キャラX=",HtbCharaSettei[AryCharaTeigi[Index]])+5)
+			CharaXSettei = Val(Token(",",String))
+		EndIf
+
+		// 括弧字幕と字幕モードで場合分け
+		Ifb KakkoJimaku = 1 Then
+			JimakuSettei = ",字幕X=" + JimakuX + ",文字配置=左寄せ[上]"
+		Else
+			Ifb JimakuX > 0 Then
+				JimakuSettei = ",字幕X=" + JimakuX + ",文字配置=右寄せ[上]"
+			Else
+				JimakuSettei = ",字幕X=" + JimakuX + ",文字配置=左寄せ[上]"
+			EndIf
+			Ifb JimakuMode = "自動" Then
+				Ifb CharaXSettei > 0 Then
+					If JimakuX < 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=右寄せ[上]"
+				Else
+					If JimakuX > 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=左寄せ[上]"
+				EndIf
+			ElseIf JimakuMode = "左" Then
+				If JimakuX > 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=左寄せ[上]"
+			ElseIf JimakuMode = "右" Then
+				If JimakuX < 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=右寄せ[上]"
+			ElseIf JimakuMode = "中" Then // 間と字幕.txtで字幕Xを0にして登場人物.txtの字幕を中にすると有効
+				If JimakuX = 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=中央揃え[上]"
+			EndIf
+		EndIf
+
+		// 字幕設定を付加
+		Ifb JimakuMode <> "なし" Then
+			HtbCharaSettei[AryCharaTeigi[Index]] = Replace(HtbCharaSettei[AryCharaTeigi[Index]],",字幕="+JimakuMode,JimakuSettei)
+		EndIf
+
+		Index = Index + 1
+	Wend
+
+	// キャラXや立ち絵Xにより、キャラの左右反転を設定
+	Index = 1
+	While AryCharaTeigi[Index] <> ""
+
+		// 立ち絵X設定の取得
+		Ifb Pos("立ち絵X=",HtbCharaSettei[AryCharaTeigi[Index]]) > 0 Then
+			String = Copy(HtbCharaSettei[AryCharaTeigi[Index]],Pos("立ち絵X=",HtbCharaSettei[AryCharaTeigi[Index]])+5)
+			CharaXSettei = Val(Token(",",String))
+		EndIf
+
+		// キャラX設定の取得
+		Ifb Pos("キャラX=",HtbCharaSettei[AryCharaTeigi[Index]]) > 0 Then
+			String = Copy(HtbCharaSettei[AryCharaTeigi[Index]],Pos("キャラX=",HtbCharaSettei[AryCharaTeigi[Index]])+5)
+			CharaXSettei = Val(Token(",",String))
+		EndIf
+
+		// 左右反転設定を付加
+		If CharaXSettei < 0 Then HtbCharaSettei[AryCharaTeigi[Index]] = HtbCharaSettei[AryCharaTeigi[Index]] + ",左右反転=1"
+
+		Index = Index + 1
+	Wend
+
+	FClose(ToujoujinbutsuID) // 登場人物.txtを閉じる
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：辞書.txtの取得
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure GetJisho()
+
+	Dim Index // 汎用のインデックス
+	Dim Index2 // 汎用のインデックス
+	Dim Count // 汎用のカウント
+	Dim String // 汎用の文字列
+
+	Dim JishoID // 辞書.txtのファイルID
+
+	Dim AryMaeString[9999] // ソート前の辞書.txtの変換前の文字列
+	Dim AryAtoString[9999] // ソート後の辞書.txtの変換後の文字列
+	Dim AryMojisuu[9999] // 変換前文字列の文字数
+	Dim MojisuuMax // 変換前文字列の文字数の最大値
+
+
+	JishoID = FOpen(GET_CUR_DIR+"\設定\辞書.txt",F_READ) // 辞書.txtを開きファイルIDを記憶
+
+	// 辞書.txt全行読み込みループ
+	Index = 1
+	MojisuuMax = 0
+	For Count = 1 to FGet(JishoID,F_LINECOUNT)
+
+		String = FGet(JishoID,Count)
+		String = Token("/",String)
+		String = Replace(String,"＝","=")
+
+		Ifb Pos("=",String) > 0 Then
+
+			AryMaeString[Index] = Trim(Token("=",String))
+			AryAtoString[Index] = Trim(String)
+			AryMojisuu[Index] = Length(AryMaeString[Index])
+
+			If AryMojisuu[Index] > MojisuuMax Then MojisuuMax = AryMojisuu[Index]
+
+			Index = Index + 1
+		EndIf
+
+	Next
+
+	FClose(JishoID) // 辞書.txtを閉じる
+
+	// 文字数降順にソート
+	Index2 = 1
+	For Count = MojisuuMax to 1 step -1
+
+		Index = 1
+		While AryMaeString[Index] <> ""
+
+			Ifb AryMojisuu[Index] = Count Then
+
+				AryHenkanMae[Index2] = AryMaeString[Index]
+				AryHenkanGo[Index2] = AryAtoString[Index]
+				Index2 = Index2 + 1
+
+			EndIf
+
+			Index = Index + 1
+		Wend
+
+	Next
+
+Fend
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：」が足りなければ追加
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Function AddKakko(SerifuBun)
+
+	Dim String // 汎用の文字列
+	Dim Count // 汎用のカウント
+	Dim Count2 // 汎用のカウント
+
+	// 「の数をカウント
+	String = SerifuBun
+	Count = 0
+	While Pos("「",String) > 0
+		Token("「",String)
+		Count = Count +1
+	Wend
+
+	// 」の数をカウント
+	String = SerifuBun
+	Count2 = 0
+	While Pos("」",String) > 0
+		Token("」",String)
+		Count2 = Count2 +1
+	Wend
+
+	If Count > Count2 Then SerifuBun = SerifuBun + "」"
+
+	Result = SerifuBun
+
+Fend
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　関数：中止処理
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+Procedure StopMacro(Msg)
+
+	MsgBox(Msg)
+	ExitExit
+
+Fend
+
+
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+//　テキストブロック
+//＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+TextBlock FormJishoTouroku
+
+<form method="post" style="background-color:#CCCCCC;color:#333333;">
+	<table width="0"  border="0" cellspacing="4" cellpadding="0" align="center">
+		<tr><td align="center"><span style="font-size:14px;font-weight:bold;">変換前 </span><input name="InputHenkanMae" type="text" size="16"></td></tr>
+		<tr><td align="center"><span style="font-size:14px;font-weight:bold;">変換後 </span><input name="InputHenkanGo" type="text" size="16"></td></tr>
+		<tr><td align="center"><input name="BtnJishoTouroku" type="submit" value="登録する"></td></tr>
+	</table>
+</form>
+
+EndTextBlock

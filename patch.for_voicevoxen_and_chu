@@ -1,0 +1,128 @@
+--- Step1.uws	2016-02-03 00:00:00.000000000 +0900
++++ Step1_edited.uws	2022-04-29 16:00:51.117258000 +0900
+@@ -43,6 +43,31 @@ Public HashTbl HtbCharaSettei // 台本.tx
+ 
+ Public ActiveWindow // ウィンドウ遷移のチェックの為、chara_selector操作対象のウィンドウ名を記憶
+ 
++// 使用する前に、USWCのFree版をインストールして、Windowsの環境設定でパスを通しておきます。
++// ついでに、.uwsの拡張子をUWSC.exeに関連付けておきます。
++// ここまでが前提(関連付けが済むと青バックのアイコンに代わります)で、
++// ここまでやっておけば、Step1.uwsというソースを実行することで動くようになります。
++// ここ以降が本題で、
++// 事前にVOICEVOXあるいはCOEIROINKの両方あるいはいずれかをインストールしておきます。
++// また、SAPI For VoiceVoX(32ビット)で棒読みちゃんと連携させておきましょう。
++// VoiceVox＋Coeiroink用にちょっとだけ追加(とりあえず動けばいいバージョン)
++// 登場人物.txtの声の部分は
++// 【棒読みちゃん用】声質=VOICEVOX 冥鳴ひまり ノーマル
++// のように書いておく(ノーマル直後にはスペース入れちゃダメ)。
++// ↑は棒読みちゃんの設定→システム→音声合成エンジンの表示名を書く(選択すると下の表示名の欄に出るのでコピペする)
++// 確認後、棒読みちゃんを閉じ忘れないこと
++// VOICEVOXとCOEIROINKは実行ファイルをフルパスで記載します。
++// 仮としてパスを入れてありますが、環境に応じて書き換えてください。
++// ↓ここです。
++public VOICEVOX="C:\Program Files\VOICEVOX\VOICEVOX.exe"
++public COEIROINK="C:\COEIROINK-CPU-v.1.2.0\COEIROINKonVOICEVOX.exe"
++
++Public VVFLAG  // For VoiceVox
++Public VVFLAG2 // For Coeiroink
++Public Wait4VVen=10
++VVFLAG=0
++VVFLAG2=0
++// あとついでに文字を中央揃えにするための設定も追加しています。
+ 
+ //＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+ //　nicotalkフォルダの場所を取得し、台本.txtをチェック
+@@ -2137,6 +2162,35 @@ Procedure OutputDaihon()
+ 			Sleep(0.5)
+ 		Wend
+ 
++// VoiceVox＋COEIROINKの取り合えず動けばいいレベルの修正
++		If VVFLAG = 1 then
++			dim vvid = 0
++			vvid =  GetID("voicevox","Chrome_WidgetWin_1",0.1)
++			If vvid <> -1 then
++				dim str
++				str = GETSTR(vvid, 0, STR_STATIC)
++				If str <> "voicevox" then // COEIRO側が起動していてもVOICEVOXが起動していなければ起動
++					VVFLAG=2
++				EndIf
++			Else // VoiceVox 関連が起動していない場合
++				VVFLAG=2
++			EndIf
++		EndIf
++		If VVFLAG = 2 then
++			Exec(VOICEVOX) // VoiceVoxを事前起動(パスは書き換えて使ってください)
++			Sleep(Wait4VVen) // エンジン起動の待ち時間はマシンによって変更してください。
++			vvid = GetID("voicevox","Chrome_WidgetWin_1",0.1) //閉じるときに使う用。閉じる直前だとおかしい値がとれるのでここで入れておく。GetIDの第一引数は完全一致が優先。のはず・・・
++		EndIf
++		
++		If VVFLAG2 = 1 then
++			If GetID("voicevox-modified-by-shirowanisan","Chrome_WidgetWin_1",0.1) = -1 then
++				Exec(COEIROINK) //COEIROINKを事前起動(パスは書き換えて使ってください)
++				VVFLAG2=2 // 今回開いたよという情報に変える
++				Sleep(Wait4VVen) // エンジン起動の待ち時間はマシンによって変更してください。
++			EndIf
++		EndIf
++// ここまで
++
+ 		// Step2.exeを実行
+ 		Exec(nicotalkFolder + "\Step2.exe")
+ 
+@@ -2165,7 +2219,19 @@ Procedure OutputDaihon()
+ 			If GetKeyState(VK_Escape) = True Then StopMacro("[Esc]キーが押された為、Step1.exeを中止します")
+ 		Wend
+ 		ClkItem(GetID("Step2","TUmsgDlg_uwsc"),"OK",CLK_BTN)
+-
++		
++// VoiceVoxとCOEIROINKの終了処理
++// 閉じちゃう(もともと開いていたら閉じない)
++		If VVFLAG = 2 then
++			CtrlWin(vvid,close)
++		EndIf
++		If VVFLAG2 = 2 then
++			If GetID("voicevox-modified-by-shirowanisan","Chrome_WidgetWin_1",0.1) <> -1 then
++				CtrlWin(GetID("voicevox-modified-by-shirowanisan","Chrome_WidgetWin_1",0.1),close)
++			EndIf
++		EndIf
++//ここまで
++		
+ 		// Step3.exeを実行
+ 		Exec(nicotalkFolder + "\Step3.exe",True)
+ 
+@@ -2302,7 +2368,26 @@ Procedure GetChara()
+ 		String = FGet(ToujoujinbutsuID,Gyou)
+ 		If Pos("//",String) > 0 Then String = Copy(String,1,Pos("//",String)-1) // コメントアウトより左の文字列に変換
+ 		If Pos("】",String) > 0 Then Token("】",String) // 】より右の文字列に変換
+-		String = Replace(String," ","") // 半角スペースを削除
++		If Pos("声質",String) > 0 Then
++			String = Replace(String," 声質","声質") // For VoiceVox
++			If Pos("VOICEVOX",String) > 0 then
++				If Pos("つくよみちゃん",String) > 0 then // 以降の分岐はCOEIROINKに追加されたら追加しないといけない
++					VVFLAG2=1
++				Elseif Pos("MANA",String) > 0 then
++					VVFLAG2=1
++				Elseif Pos("おふとんP",String) > 0 then
++					VVFLAG2=1
++				Elseif Pos("ディアちゃん",String) > 0 then
++					VVFLAG2=1
++				Elseif Pos("アルマちゃん",String) > 0 then
++					VVFLAG2=1
++				Endif
++				VVFLAG=1
++				
++			Endif
++		Else
++			String = Replace(String," ","") // 半角スペースを削除
++		EndIf
+ 
+ 		Ifb String <> "" Then
+ 
+@@ -2399,6 +2484,8 @@ Procedure GetChara()
+ 				If JimakuX > 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=左寄せ[上]"
+ 			ElseIf JimakuMode = "右" Then
+ 				If JimakuX < 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=右寄せ[上]"
++			ElseIf JimakuMode = "中" Then // 間と字幕.txtで字幕Xを0にして登場人物.txtの字幕を中にすると有効
++				If JimakuX = 0 Then JimakuSettei = ",字幕X=" + (-JimakuX) + ",文字配置=中央揃え[上]"
+ 			EndIf
+ 		EndIf
+ 
